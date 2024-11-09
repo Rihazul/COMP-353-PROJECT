@@ -65,6 +65,40 @@
         form input[type="submit"]:hover {
             background: #7a29b8;
         }
+        .friends-list {
+            max-height: 400px; /* Set max height for scroll */
+            overflow-y: auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px 0px #ccc;
+            margin-top: 20px;
+        }
+        .friend-card {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 0px 0px 5px 0px #ccc;
+            transition: background-color 0.3s;
+        }
+        .friend-card:hover {
+            background-color: #e0d4f7;
+        }
+        .friend-card img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .friend-card a {
+            text-decoration: none;
+            color: #333;
+            font-size: 18px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -79,20 +113,35 @@
             </div>
         </div>
     </header>
+    
     <div class="container">
+        <!-- Search Form -->
         <form action="search_friends.php" method="post">
             <input type="text" name="search" placeholder="Search for friends...">
             <input type="submit" value="Search">
         </form>
+        
+        <!-- Friends List Section -->
         <h2>Friends List</h2>
-        <ul id="friends-list">
+        <div class="friends-list" id="friends-list">
             <?php
-            $friends = ["Alice", "Bob", "Charlie"]; // Example friends list
+            // Example friends data with profile picture URLs and IDs
+            $friends = [
+                ["name" => "Alice", "profile_pic" => "alice.jpg", "id" => 1],
+                ["name" => "Bob", "profile_pic" => "bob.jpg", "id" => 2],
+                ["name" => "Charlie", "profile_pic" => "charlie.jpg", "id" => 3]
+            ];
+            
             foreach ($friends as $friend) {
-                echo "<li>$friend</li>";
+                echo "<div class='friend-card'>";
+                echo "<img src='" . $friend['profile_pic'] . "' alt='" . $friend['name'] . "'>";
+                echo "<a href='user_profile.php?id=" . $friend['id'] . "'>" . $friend['name'] . "</a>";
+                echo "</div>";
             }
             ?>
-        </ul>
+        </div>
+        
+        <!-- Add Friend Form -->
         <form action="friends.php" method="POST">
             <input type="text" name="new_friend" placeholder="Add a new friend">
             <input type="submit" value="Add Friend">
