@@ -56,14 +56,55 @@
         .logout-button:hover {
             background-color: #e0d4f7;
         }
+        .profile-content {
+            width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px 0px #000;
+            background-color: white;
+            text-align: center;
+            position: relative;
+        }
+        .cover-box {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+            border: 1px solid black;
+        }
+        .cover-box img.cover-pic {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            
+        }
+        .profile-pic-container {
+            position: absolute;
+            top: 200px; /* Adjust to position the profile picture */
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            border-radius: 50%;
+            border: 1px solid black;
+
+        }
+        /* .profile-pic-container img.profile-pic {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0px 0px 10px 0px #000;
+        } */
         .profile-name {
             font-size: 24px;
             font-weight: bold;
             color: #333;
-            margin-top: 10px;
+            margin-top: 80px; /* Adjust to create space below the profile picture */
         }
         .profile-buttons {
-            margin-top: 100px; /* Adjust margin to create space for the profile picture */
+            margin-top: 20px;
         }
         .profile-buttons button {
             background-color: #9e34eb;
@@ -78,35 +119,6 @@
         }
         .profile-buttons button:hover {
             background-color: #7a29b8;
-        }
-        .profile-content {
-            width: 900px;
-            margin: 20px auto;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px 0px #000;
-            background-color: white;
-            text-align: center;
-            position: relative; /* Ensures the profile picture is positioned correctly */
-        }
-
-        .profile-content img.cover-pic {
-            width: 100%;
-            height: 300px; /* Adjusted height for better alignment */
-            border-radius: 10px 10px 0 0;
-            object-fit: cover; /* Ensures the cover image scales properly */
-        }
-
-        .profile-content img.profile-pic {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            border: 5px solid white;
-            position: absolute;
-            top: 200px; /* Adjusted top position to center profile picture below cover */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1; /* Ensures it sits on top of other elements */
         }
         .main-content {
             width: 900px;
@@ -159,6 +171,33 @@
             border-radius: 10px;
             box-shadow: 0px 0px 5px 0px #ccc;
         }
+        .post-form {
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 0px 0px 5px 0px #ccc;
+        }
+        .post-form textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            resize: none;
+        }
+        .post-form button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #9e34eb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .post-form button:hover {
+            background-color: #7a29b8;
+        }
     </style>
 </head>
 <body>
@@ -177,9 +216,13 @@
 
     <!-- profile content/ cover part -->
     <div class="profile-content">
-        <img src="cover.jpg" class="cover-pic" alt="Cover Photo">
-        <img src="profile.jpg" class="profile-pic" alt="Profile Photo">
-        <div class="profile-name">Jone Doe</div>
+        <div class="cover-box">
+            <img src="cover.jpg" class="cover-pic" alt="Cover Photo">
+            <div class="profile-pic-container">
+                <img src="profile.jpg" class="profile-pic" alt="Profile Photo">
+                <div class="profile-name">Jone Doe</div>
+            </div>
+        </div>
         <div class="profile-buttons">
             <button onclick="window.location.href='timeline.php'">Timeline</button>
             <button onclick="window.location.href='about.php'">About</button>
@@ -208,8 +251,14 @@
             </div>
         </div>
         
-        <!-- right side : posts -->
+        <!-- right side : post form and posts -->
         <div class="posts-list">
+            <div class="post-form">
+                <form action="post_handler.php" method="post">
+                    <textarea name="post_content" rows="4" placeholder="What's on your mind?"></textarea>
+                    <button type="submit">Post</button>
+                </form>
+            </div>
             <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Posts</div>
             <div class="post">
                 <p>Post content 1</p>
