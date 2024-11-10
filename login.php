@@ -1,7 +1,3 @@
-
-
-
-
 <html>
     <head>
         <title>COSN | Log In</title>
