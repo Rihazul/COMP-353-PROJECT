@@ -93,3 +93,19 @@
     </body>
 
 </html>
+<?php
+
+
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] == 'admin') {
+    header("Location: admin.php"); // Redirect to login page if not admin
+    exit();
+}
+else
+header("Location: profile.php");
+
+
+//Database connection
+//include 'db_connection.php';
+//$conn = OpenCon();
+
+?>
