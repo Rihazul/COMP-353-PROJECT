@@ -84,24 +84,24 @@
             position: absolute;
             top: 200px; /* Adjust to position the profile picture */
             left: 50%;
+            width: 100px;
+            height: 100px;
             transform: translateX(-50%);
             text-align: center;
             border-radius: 50%;
             border: 1px solid black;
-
         }
-        /* .profile-pic-container img.profile-pic {
-            width: 200px;
-            height: 200px;
+        .profile-pic {
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            border: 5px solid white;
-            box-shadow: 0px 0px 10px 0px #000;
-        } */
+        }
+
         .profile-name {
             font-size: 24px;
             font-weight: bold;
             color: #333;
-            margin-top: 80px; /* Adjust to create space below the profile picture */
+
         }
         .profile-buttons {
             margin-top: 20px;
@@ -217,9 +217,9 @@
     <!-- profile content/ cover part -->
     <div class="profile-content">
         <div class="cover-box">
-            <img src="cover.jpg" class="cover-pic" alt="Cover Photo">
+            <img src="https://via.placeholder.com/900x400?text=Cover+Photo" class="cover-pic" alt="Cover Photo">
             <div class="profile-pic-container">
-                <img src="profile.jpg" class="profile-pic" alt="Profile Photo">
+                <img src="/img/default-profile-picture.png" class="profile-pic" alt="Profile Photo">
                 <div class="profile-name">Jone Doe</div>
             </div>
         </div>
@@ -238,15 +238,15 @@
         <div class="friends-list">
             <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Friends</div>
             <div class="friend-card">
-                <img src="friend1.jpg" alt="Friend 1">
+                <img src="/img/default-profile-picture.png" alt="Friend 1">
                 <div>Friend 1</div>
             </div>
             <div class="friend-card">
-                <img src="friend2.jpg" alt="Friend 2">
+                <img src="/img/default-profile-picture.png" alt="Friend 2">
                 <div>Friend 2</div>
             </div>
             <div class="friend-card">
-                <img src="friend3.jpg" alt="Friend 3">
+                <img src="/img/default-profile-picture.png" alt="Friend 3">
                 <div>Friend 3</div>
             </div>
         </div>
