@@ -1,3 +1,87 @@
+<?php
+// Start session (if needed for user authentication)
+session_start();
+
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Database credentials
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+// Connect to the database
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check database connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Set user ID (replace with dynamic session data in production)
+$user_id = 1;
+
+// Handle friend addition
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['new_friend'])) {
+    $new_friend = trim($_POST['new_friend']);
+
+    if (!empty($new_friend)) {
+        // Check if the friend exists in the Member table
+        $friend_query = "SELECT MemberID FROM Member WHERE Pseudonym = '$new_friend'";
+        $friend_result = $conn->query($friend_query);
+
+        if ($friend_result && $friend_result->num_rows > 0) {
+            $friend_data = $friend_result->fetch_assoc();
+            $friend_id = $friend_data['MemberID'];
+
+            // Check if a friendship already exists
+            $check_friend_query = "
+                SELECT * 
+                FROM Friends 
+                WHERE (MemberID1 = $user_id AND MemberID2 = $friend_id) 
+                   OR (MemberID1 = $friend_id AND MemberID2 = $user_id)";
+            $check_friend_result = $conn->query($check_friend_query);
+
+            if ($check_friend_result && $check_friend_result->num_rows === 0) {
+                // Add the friend relationship with status 'Pending'
+                $add_friend_query = "
+                    INSERT INTO Friends (MemberID1, MemberID2, DateStarted, Status) 
+                    VALUES ($user_id, $friend_id, NOW(), 'Pending')";
+                if ($conn->query($add_friend_query)) {
+                    $message = "<div class='message success'>Friend request sent to $new_friend!</div>";
+                } else {
+                    $message = "<div class='message error'>Error adding friend: " . $conn->error . "</div>";
+                }
+            } else {
+                $message = "<div class='message error'>You are already friends or a request is pending with $new_friend.</div>";
+            }
+        } else {
+            $message = "<div class='message error'>User $new_friend not found.</div>";
+        }
+    }
+}
+
+// Fetch friends list
+$friends_list = [];
+$friends_query = "
+    SELECT M.MemberID, M.Pseudonym
+    FROM Friends F
+    INNER JOIN Member M 
+        ON (F.MemberID1 = M.MemberID OR F.MemberID2 = M.MemberID)
+    WHERE (F.MemberID1 = $user_id OR F.MemberID2 = $user_id) 
+      AND F.Status = 'Accepted' 
+      AND M.MemberID != $user_id";
+$result = $conn->query($friends_query);
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $friends_list[] = $row;
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,7 +150,7 @@
             background: #7a29b8;
         }
         .friends-list {
-            max-height: 400px; /* Set max height for scroll */
+            max-height: 400px;
             overflow-y: auto;
             background-color: white;
             padding: 20px;
@@ -99,6 +183,20 @@
             font-size: 18px;
             font-weight: bold;
         }
+        .message {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -115,6 +213,8 @@
     </header>
     
     <div class="container">
+        <?php if (isset($message)) echo $message; ?>
+
         <!-- Search Form -->
         <form action="search_friends.php" method="post">
             <input type="text" name="search" placeholder="Search for friends...">
@@ -124,23 +224,18 @@
         <!-- Friends List Section -->
         <h2>Friends List</h2>
         <div class="friends-list" id="friends-list">
-            <?php
-            // Example friends data with profile picture URLs and IDs
-            $friends = [
-                ["name" => "Alice", "profile_pic" => "alice.jpg", "id" => 1],
-                ["name" => "Bob", "profile_pic" => "bob.jpg", "id" => 2],
-                ["name" => "Charlie", "profile_pic" => "charlie.jpg", "id" => 3]
-            ];
-            
-            foreach ($friends as $friend) {
-                echo "<div class='friend-card'>";
-                echo "<img src='" . $friend['profile_pic'] . "' alt='" . $friend['name'] . "'>";
-                echo "<a href='user_profile.php?id=" . $friend['id'] . "'>" . $friend['name'] . "</a>";
-                echo "</div>";
-            }
-            ?>
+            <?php if (empty($friends_list)): ?>
+                <p>No friends found.</p>
+            <?php else: ?>
+                <?php foreach ($friends_list as $friend): ?>
+                    <div class="friend-card">
+                        <img src="<?php echo htmlspecialchars($friend['ProfilePic'] ?? 'default.jpg'); ?>" alt="<?php echo htmlspecialchars($friend['Pseudonym']); ?>">
+                        <a href="user_profile.php?id=<?php echo $friend['MemberID']; ?>"><?php echo htmlspecialchars($friend['Pseudonym']); ?></a>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
-        
+
         <!-- Add Friend Form -->
         <form action="friends.php" method="POST">
             <input type="text" name="new_friend" placeholder="Add a new friend">

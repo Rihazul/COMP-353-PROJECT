@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Post Details</title>
+    <title>Create Post</title>
     <style>
         body {
             font-family: Tahoma, sans-serif;
-            background-color: #fac3da;
+            background-color: #f4f4f4;
             margin: 0;
             padding: 0;
         }
@@ -25,156 +25,119 @@
             margin: auto;
             padding: 20px;
         }
-        .post-container, .comments-container {
+        .form-container {
             background-color: white;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0px 0px 10px 0px #ccc;
-            margin-bottom: 20px;
         }
-        .post-container h2, .comments-container h3 {
+        .form-container h2 {
             color: #9e34eb;
             margin-top: 0;
         }
-        .attachment {
-            margin-top: 10px;
-            text-align: center;
-        }
-        .attachment img, .attachment video {
-            max-width: 100%;
-            border-radius: 10px;
-            margin-top: 10px;
-        }
-        .comments-container .comment {
-            padding: 10px;
-            border-bottom: 1px solid #ccc;
-            margin-bottom: 10px;
-        }
-        .comment:last-child {
-            border-bottom: none;
-        }
-        .comment-form {
-            margin-top: 20px;
-        }
-        .comment-form textarea {
+        .form-container textarea,
+        .form-container input,
+        .form-container button {
             width: 100%;
+            margin-bottom: 15px;
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ccc;
-            resize: none;
         }
-        .comment-form button {
-            padding: 10px 20px;
+        .form-container button {
             background-color: #9e34eb;
             color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
             font-weight: bold;
-            margin-top: 10px;
+            cursor: pointer;
         }
-        .comment-form button:hover {
+        .form-container button:hover {
             background-color: #7a29b8;
+        }
+        .message {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>Post Details</h1>
+        <h1>Create Post</h1>
     </header>
-
     <div class="container">
-        <!-- Post Content and Attachment Section -->
-        <div class="post-container">
-            <?php
-            // Replace with actual post ID from URL parameter
-            $post_id = $_GET['post_id'];
+        <?php
+        // Database connection
+        $servername = "upc353.encs.concordia.ca";
+        $username = "upc353_2";
+        $password = "SleighParableSystem73";
+        $dbname = "upc353_2";
 
-            // Connect to the database
-            $conn = new mysqli("localhost", "username", "password", "database");
+        $conn = new mysqli($servername, $username, $password, $dbname);
 
-            if ($conn->connect_error) {
-                die("Connection failed: " . $conn->connect_error);
-            }
+        if ($conn->connect_error) {
+            die("<div class='message error'>Connection failed: " . $conn->connect_error . "</div>");
+        }
 
-            // Fetch the post data
-            $post_query = "SELECT title, content, attachment, created_at FROM posts WHERE id = ?";
-            $stmt = $conn->prepare($post_query);
-            $stmt->bind_param("i", $post_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $post = $result->fetch_assoc();
+        // Handle form submission
+        if ($_SERVER["REQUEST_METHOD"] === "POST") {
+            $member_id = $_POST['member_id'];
+            $text_content = $_POST['text_content'];
+            $attachment = null;
 
-            if ($post) {
-                echo "<h2>" . htmlspecialchars($post['title']) . "</h2>";
-                echo "<p>" . htmlspecialchars($post['content']) . "</p>";
-                echo "<p><small>Posted on: " . $post['created_at'] . "</small></p>";
-                
-                // Display attachment if it exists
-                if (!empty($post['attachment'])) {
-                    echo "<div class='attachment'>";
-                    $attachment = $post['attachment'];
-                    
-                    // Check file type to decide how to display it
-                    $file_extension = pathinfo($attachment, PATHINFO_EXTENSION);
-                    if (in_array($file_extension, ['jpg', 'jpeg', 'png', 'gif'])) {
-                        echo "<img src='uploads/$attachment' alt='Attachment'>";
-                    } elseif (in_array($file_extension, ['mp4', 'webm', 'ogg'])) {
-                        echo "<video controls src='uploads/$attachment'></video>";
-                    } else {
-                        echo "<p><a href='uploads/$attachment' download>Download Attachment</a></p>";
-                    }
-                    echo "</div>";
+            // Handle file upload
+            if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = "uploads/";
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
                 }
-            } else {
-                echo "<p>Post not found.</p>";
-            }
+                $file_name = basename($_FILES["attachment"]["name"]);
+                $target_file = $upload_dir . uniqid() . "_" . $file_name;
 
-            $stmt->close();
-            ?>
-
-        </div>
-
-        <!-- Comments Section -->
-        <div class="comments-container">
-            <h3>Comments</h3>
-            <?php
-            // Fetch comments for the post
-            $comments_query = "SELECT user_name, comment_text, commented_at FROM comments WHERE post_id = ? ORDER BY commented_at DESC";
-            $stmt = $conn->prepare($comments_query);
-            $stmt->bind_param("i", $post_id);
-            $stmt->execute();
-            $comments_result = $stmt->get_result();
-
-            if ($comments_result->num_rows > 0) {
-                while ($comment = $comments_result->fetch_assoc()) {
-                    echo "<div class='comment'>";
-                    echo "<p><strong>" . htmlspecialchars($comment['user_name']) . ":</strong></p>";
-                    echo "<p>" . htmlspecialchars($comment['comment_text']) . "</p>";
-                    echo "<p><small>Commented on: " . $comment['commented_at'] . "</small></p>";
-                    echo "</div>";
+                if (move_uploaded_file($_FILES["attachment"]["tmp_name"], $target_file)) {
+                    $attachment = $target_file; // Save the file path to the database
+                } else {
+                    echo "<div class='message error'>File upload failed.</div>";
                 }
-            } else {
-                echo "<p>No comments yet. Be the first to comment!</p>";
             }
 
-            $stmt->close();
-            ?>
+            // Insert post into the database
+            $query = "INSERT INTO Posts (MemberID, TextContent, AttachmentContent, DatePosted, ModerationStatus) VALUES (?, ?, ?, NOW(), 'Pending')";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("iss", $member_id, $text_content, $attachment);
 
-            <!-- Comment Form -->
-            <div class="comment-form">
-                <form action="add_comment.php" method="post">
-                    <textarea name="comment_text" rows="4" placeholder="Write a comment..." required></textarea>
-                    <input type="hidden" name="post_id" value="<?php echo $post_id; ?>">
-                    <button type="submit">Add Comment</button>
-                </form>
-            </div>
+            if ($stmt->execute()) {
+                echo "<div class='message success'>Post created successfully! Redirecting to your profile...</div>";
+                // Redirect to profile.php after 3 seconds
+                echo "<script>
+                    setTimeout(function() {
+                        window.location.href = 'profile.php';
+                    }, 3000);
+                </script>";
+            } else {
+                echo "<div class='message error'>Error creating post: " . $conn->error . "</div>";
+            }
+            $stmt->close();
+        }
+        ?>
+        <div class="form-container">
+            <h2>Write a New Post</h2>
+            <form action="" method="post" enctype="multipart/form-data">
+                <textarea name="text_content" rows="4" placeholder="Write your post..." required></textarea>
+                <input type="file" name="attachment" accept=".jpg,.jpeg,.png,.gif,.mp4,.pdf,.doc,.docx">
+                <input type="hidden" name="member_id" value="1"> <!-- Replace with dynamic member ID -->
+                <button type="submit">Post</button>
+            </form>
         </div>
     </div>
-
-    <?php
-    // Close the database connection
-    $conn->close();
-    ?>
+    <?php $conn->close(); ?>
 </body>
 </html>
