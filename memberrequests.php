@@ -1,3 +1,77 @@
+<?php
+// Start session (if using authentication)
+session_start();
+
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Database credentials
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+// Connect to the database
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Set the user ID (replace with dynamic session-based user ID in production)
+$user_id = 1;
+
+// Fetch pending friend requests
+$friend_requests = [];
+$requests_query = "
+    SELECT F.MemberID1 AS requester_id, M.Pseudonym AS requester_name
+    FROM Friends F
+    INNER JOIN Member M ON F.MemberID1 = M.MemberID
+    WHERE F.MemberID2 = $user_id AND F.Status = 'Pending'";
+$result = $conn->query($requests_query);
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $friend_requests[] = $row;
+    }
+}
+
+// Process friend request actions (approve/reject)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
+    $request_id = intval($_POST['request_id']);
+    $action = $_POST['action']; // "approve" or "reject"
+
+    if ($action === 'approve') {
+        // Approve the friend request
+        $approve_query = "
+            UPDATE Friends 
+            SET Status = 'Accepted' 
+            WHERE MemberID1 = $request_id AND MemberID2 = $user_id AND Status = 'Pending'";
+        if ($conn->query($approve_query)) {
+            echo "<div class='message success'>Friend request approved!</div>";
+        } else {
+            echo "<div class='message error'>Error approving request: " . $conn->error . "</div>";
+        }
+    } elseif ($action === 'reject') {
+        // Reject the friend request
+        $reject_query = "
+            DELETE FROM Friends 
+            WHERE MemberID1 = $request_id AND MemberID2 = $user_id AND Status = 'Pending'";
+        if ($conn->query($reject_query)) {
+            echo "<div class='message success'>Friend request rejected.</div>";
+        } else {
+            echo "<div class='message error'>Error rejecting request: " . $conn->error . "</div>";
+        }
+    }
+
+    // Refresh the page to reflect changes
+    header("Location: requests.php");
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,33 +185,30 @@
     <div class="container">
         <h2>Friend Requests</h2>
         <div class="requests-list">
-            <?php
-            // Simulated friend requests array (replace with actual database query)
-            $friend_requests = [
-                ["id" => 1, "name" => "Alice", "profile_pic" => "alice.jpg"],
-                ["id" => 2, "name" => "Bob", "profile_pic" => "bob.jpg"],
-                ["id" => 3, "name" => "Charlie", "profile_pic" => "charlie.jpg"]
-            ];
-
-            foreach ($friend_requests as $request) {
-                echo "<div class='request-card'>";
-                echo "<div class='request-info'>";
-                echo "<img src='" . $request['profile_pic'] . "' alt='" . $request['name'] . "'>";
-                echo "<div><strong>" . $request['name'] . "</strong></div>";
-                echo "</div>";
-                echo "<div class='request-actions'>";
-                echo "<form action='approve_request.php' method='post' style='display:inline;'>";
-                echo "<input type='hidden' name='request_id' value='" . $request['id'] . "'>";
-                echo "<button type='submit' class='approve-button'>Approve</button>";
-                echo "</form>";
-                echo "<form action='reject_request.php' method='post' style='display:inline;'>";
-                echo "<input type='hidden' name='request_id' value='" . $request['id'] . "'>";
-                echo "<button type='submit' class='reject-button'>Reject</button>";
-                echo "</form>";
-                echo "</div>";
-                echo "</div>";
-            }
-            ?>
+            <?php if (empty($friend_requests)): ?>
+                <p>No friend requests found.</p>
+            <?php else: ?>
+                <?php foreach ($friend_requests as $request): ?>
+                    <div class="request-card">
+                        <div class="request-info">
+                            <img src="<?php echo htmlspecialchars($request['requester_pic'] ?? 'default.jpg'); ?>" alt="<?php echo htmlspecialchars($request['requester_name']); ?>">
+                            <div><strong><?php echo htmlspecialchars($request['requester_name']); ?></strong></div>
+                        </div>
+                        <div class="request-actions">
+                            <form action="requests.php" method="post" style="display:inline;">
+                                <input type="hidden" name="request_id" value="<?php echo $request['requester_id']; ?>">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="approve-button">Approve</button>
+                            </form>
+                            <form action="requests.php" method="post" style="display:inline;">
+                                <input type="hidden" name="request_id" value="<?php echo $request['requester_id']; ?>">
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="reject-button">Reject</button>
+                            </form>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </body>
