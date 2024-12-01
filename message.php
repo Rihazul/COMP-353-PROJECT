@@ -1,8 +1,14 @@
+
+
 <?php
 session_start();
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', 'php_errors.log'); // Specify the log file location
+error_reporting(E_ALL); // Report all PHP errors
 
 // Mock user session for demonstration
-$_SESSION['user_id'] = 1; // Replace with dynamic session data
+$_SESSION['user_id'] = 4; // Replace with dynamic session data
 
 // Database connection
 $servername = "upc353.encs.concordia.ca";
@@ -29,24 +35,54 @@ $stmt->bind_param("iii", $user_id, $user_id, $user_id);
 $stmt->execute();
 $friends_result = $stmt->get_result();
 $friends = [];
+$friends = [];
 while ($row = $friends_result->fetch_assoc()) {
-    $friends[] = $row;
+    if (!empty($row['MemberID']) && !empty($row['Pseudonym'])) {
+        $friends[] = $row; // Store valid friend records
+    }
 }
+$stmt->close(); // Explicitly close the statement
+
 
 // Handle AJAX requests for chat history
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_chat_history') {
-    $friend_id = intval($_GET['friend_id']);
+    header('Content-Type: application/json'); // Ensure JSON response
 
-    $chat_query = "
-        SELECT SenderMemberID AS sender_id, RecipientMemberID AS recipient_id, MessageText AS message_text, DateSent AS date_sent
-        FROM Messages
-        WHERE (SenderMemberID = ? AND RecipientMemberID = ?)
-           OR (SenderMemberID = ? AND RecipientMemberID = ?)
-        ORDER BY DateSent ASC";
+    $friend_id = intval($_GET['friend_id']);
+    if ($friend_id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid friend ID.']);
+        exit();
+    }
+
+$chat_query = "
+    SELECT SenderMemberID AS sender_id, RecipientMemberID AS recipient_id, Content AS message_text, DateSent AS date_sent
+    FROM Messages
+    WHERE (SenderMemberID = ? AND RecipientMemberID = ?)
+       OR (SenderMemberID = ? AND RecipientMemberID = ?)
+    ORDER BY DateSent ASC";
+
+
     $stmt = $conn->prepare($chat_query);
+
+    if ($stmt === false) {
+        echo json_encode(['success' => false, 'message' => 'Database query preparation failed.']);
+        error_log('Database query preparation failed: ' . $conn->error);
+        exit();
+    }
+
     $stmt->bind_param("iiii", $user_id, $friend_id, $friend_id, $user_id);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        echo json_encode(['success' => false, 'message' => 'Query execution failed.']);
+        error_log('Query execution failed: ' . $stmt->error);
+        exit();
+    }
+
     $chat_result = $stmt->get_result();
+    if ($chat_result === false) {
+        echo json_encode(['success' => false, 'message' => 'Failed to fetch chat history.']);
+        error_log('Failed to fetch chat history: ' . $stmt->error);
+        exit();
+    }
 
     $messages = [];
     while ($row = $chat_result->fetch_assoc()) {
@@ -57,26 +93,47 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_chat_history') {
     exit();
 }
 
+
 // Handle AJAX requests for sending messages
-if (isset($_POST['action']) && $_POST['action'] === 'send_message') {
-    $recipient_id = intval($_POST['recipient_id']);
-    $message_text = trim($_POST['message_text']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'send_message') {
+    header('Content-Type: application/json'); // Ensure JSON response
 
-    if (!empty($message_text)) {
-        $send_query = "INSERT INTO Messages (SenderMemberID, RecipientMemberID, MessageText, DateSent) VALUES (?, ?, ?, NOW())";
-        $stmt = $conn->prepare($send_query);
-        $stmt->bind_param("iis", $user_id, $recipient_id, $message_text);
+    $recipient_id = intval($_POST['recipient_id'] ?? 0);
+    $message_text = trim($_POST['message_text'] ?? '');
 
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to send message.']);
-        }
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Message text is empty.']);
+    if ($recipient_id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid recipient ID.']);
+        error_log('Invalid recipient ID: ' . $recipient_id);
+        exit();
     }
+
+    if (empty($message_text)) {
+        echo json_encode(['success' => false, 'message' => 'Message text cannot be empty.']);
+        error_log('Empty message text.');
+        exit();
+    }
+
+$send_query = "INSERT INTO Messages (SenderMemberID, RecipientMemberID, Content, DateSent) VALUES (?, ?, ?, NOW())";
+    $stmt = $conn->prepare($send_query);
+
+    if ($stmt === false) {
+        echo json_encode(['success' => false, 'message' => 'Database query preparation failed.']);
+        error_log('Database query preparation failed: ' . $conn->error);
+        exit();
+    }
+
+    $stmt->bind_param("iis", $user_id, $recipient_id, $message_text);
+    if (!$stmt->execute()) {
+        echo json_encode(['success' => false, 'message' => 'Failed to send message.']);
+        error_log('Failed to execute query: ' . $stmt->error);
+        exit();
+    }
+
+    echo json_encode(['success' => true]);
     exit();
 }
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -113,11 +170,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'send_message') {
     <div class="container">
         <div class="friends-list">
             <h3>Your Friends</h3>
-            <?php foreach ($friends as $friend): ?>
-                <div class="friend" onclick="openChat(<?php echo $friend['MemberID']; ?>, '<?php echo htmlspecialchars($friend['Pseudonym']); ?>')">
-                    <strong><?php echo htmlspecialchars($friend['Pseudonym']); ?></strong>
-                </div>
-            <?php endforeach; ?>
+<?php if (!empty($friends)): ?>
+    <?php foreach ($friends as $friend): ?>
+        <div class="friend" onclick="openChat(<?php echo $friend['MemberID']; ?>, '<?php echo htmlspecialchars($friend['Pseudonym']); ?>')">
+            <strong><?php echo htmlspecialchars($friend['Pseudonym']); ?></strong>
+        </div>
+    <?php endforeach; ?>
+<?php else: ?>
+    <p>No friends to display. Start adding friends to chat!</p>
+<?php endif; ?>
         </div>
 
         <div class="chat-box">
@@ -136,10 +197,10 @@ if (isset($_POST['action']) && $_POST['action'] === 'send_message') {
         function openChat(friendId, friendName) {
             currentRecipientId = friendId;
             document.getElementById('recipient_id').value = friendId;
-            loadChatHistory(friendId);
+            loadChatHistory(friendId, friendName);
         }
 
-        function loadChatHistory(friendId) {
+        function loadChatHistory(friendId, friendName) {
             fetch(`?action=fetch_chat_history&friend_id=${friendId}`)
                 .then(response => response.json())
                 .then(messages => {
@@ -147,7 +208,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'send_message') {
                     chatHistory.innerHTML = `<h3>Chat with ${friendName}</h3>`;
                     messages.forEach(msg => {
                         const div = document.createElement('div');
-                        div.className = `message ${msg.sender_id === friendId ? 'received' : 'sent'}`;
+                        div.className = `message ${msg.sender_id === currentRecipientId ? 'received' : 'sent'}`;
                         div.textContent = msg.message_text;
                         chatHistory.appendChild(div);
                     });
@@ -155,33 +216,39 @@ if (isset($_POST['action']) && $_POST['action'] === 'send_message') {
                 });
         }
 
-        document.getElementById('message-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const messageText = document.getElementById('message_text').value;
+document.getElementById('message-form').addEventListener('submit', function(event) {
+    event.preventDefault();
 
-            fetch('', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=send_message&recipient_id=${currentRecipientId}&message_text=${encodeURIComponent(messageText)}`
-            })
-            .then(response => response.json())
-            .then(result => {
-                const chatHistory = document.getElementById('chat-history');
-                if (result.success) {
-                    const div = document.createElement('div');
-                    div.className = 'message sent';
-                    div.textContent = messageText;
-                    chatHistory.appendChild(div);
-                    chatHistory.scrollTop = chatHistory.scrollHeight;
-                    document.getElementById('message_text').value = '';
-                } else {
-                    const div = document.createElement('div');
-                    div.className = 'message error';
-                    div.textContent = result.message || 'Failed to send message.';
-                    chatHistory.appendChild(div);
-                }
-            });
-        });
+    const messageText = document.getElementById('message_text').value;
+    const recipientId = currentRecipientId;
+
+    if (!messageText || !recipientId) {
+        alert('Message text or recipient is missing!');
+        return;
+    }
+
+    fetch('', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=send_message&recipient_id=${recipientId}&message_text=${encodeURIComponent(messageText)}`
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const chatHistory = document.getElementById('chat-history');
+            const div = document.createElement('div');
+            div.className = 'message sent';
+            div.textContent = messageText;
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            document.getElementById('message_text').value = ''; // Clear input
+        } else {
+            alert(result.message || 'Failed to send message.');
+        }
+    })
+    .catch(error => console.error('Error sending message:', error));
+});
+
     </script>
 </body>
 </html>

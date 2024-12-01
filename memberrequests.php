@@ -22,7 +22,7 @@ if ($conn->connect_error) {
 }
 
 // Set the user ID (replace with dynamic session-based user ID in production)
-$user_id = 1;
+$user_id = 4;
 
 // Fetch pending friend requests
 $friend_requests = [];
