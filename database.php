@@ -20,9 +20,9 @@ $tables = [
     "Posts" => ["PostID", "MemberID", "GroupID", "TextContent", "AttachmentContent", "DatePosted", "ModerationStatus"],
     "Comments" => ["CommentID", "PostID", "MemberID", "Content", "DatePosted"],
     "Friends" => ["MemberID1", "MemberID2", "DateStarted", "Status"],
-    "Notifications" => ["ContentID", "MessageID", "Date", "MemberID"],
-    "`Event`" => ["EventID", "CreationDate", "MemberID"],
-    "Event_vote" => ["EventID", "VoteDate", "Suggestions", "MemberID"],
+    "Notifications" => ["ContentID", "MessageID", "Date", "MemberID", "NotificationContent"],
+    "`Event`" => ["Event", "MemberID"],
+    "suggestions" => ["SuggestionID", "MemberID", "Event", "Suggestion", "Date", "Time", "Votes"],
     "Gift_exchange" => ["GroupID", "MemberID1", "MemberID2", "Post"],
 ];
 

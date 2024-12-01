@@ -1,0 +1,20 @@
+[01-Dec-2024 21:16:30 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'MessageText' in 'field list' in C:\xampp\htdocs\message.php:57
+Stack trace:
+#0 C:\xampp\htdocs\message.php(57): mysqli->prepare('\r\n        SELEC...')
+#1 {main}
+  thrown in C:\xampp\htdocs\message.php on line 57
+[01-Dec-2024 21:16:32 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'MessageText' in 'field list' in C:\xampp\htdocs\message.php:87
+Stack trace:
+#0 C:\xampp\htdocs\message.php(87): mysqli->prepare('INSERT INTO Mes...')
+#1 {main}
+  thrown in C:\xampp\htdocs\message.php on line 87
+[01-Dec-2024 21:18:23 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'MessageText' in 'field list' in C:\xampp\htdocs\message.php:63
+Stack trace:
+#0 C:\xampp\htdocs\message.php(63): mysqli->prepare('\r\n        SELEC...')
+#1 {main}
+  thrown in C:\xampp\htdocs\message.php on line 63
+[01-Dec-2024 21:18:24 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'MessageText' in 'field list' in C:\xampp\htdocs\message.php:115
+Stack trace:
+#0 C:\xampp\htdocs\message.php(115): mysqli->prepare('INSERT INTO Mes...')
+#1 {main}
+  thrown in C:\xampp\htdocs\message.php on line 115
