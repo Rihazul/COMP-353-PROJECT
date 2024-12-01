@@ -45,15 +45,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
     $action = $_POST['action']; // "approve" or "reject"
 
     if ($action === 'approve') {
-        // Approve the friend request
-        $approve_query = "
-            UPDATE Friends 
-            SET Status = 'Accepted' 
-            WHERE MemberID1 = $request_id AND MemberID2 = $user_id AND Status = 'Pending'";
-        if ($conn->query($approve_query)) {
-            echo "<div class='message success'>Friend request approved!</div>";
-        } else {
-            echo "<div class='message error'>Error approving request: " . $conn->error . "</div>";
+        // Begin transaction to ensure both operations succeed
+        $conn->begin_transaction();
+
+        try {
+            // Add the two users as friends
+            $add_friend_query = "
+                INSERT INTO Friends (MemberID1, MemberID2, DateStarted, Status)
+                VALUES ($user_id, $request_id, NOW(), 'Accepted')";
+            $conn->query($add_friend_query);
+
+            // Remove the pending request
+            $remove_request_query = "
+                DELETE FROM Friends 
+                WHERE MemberID1 = $request_id AND MemberID2 = $user_id AND Status = 'Pending'";
+            $conn->query($remove_request_query);
+
+            // Commit the transaction
+            $conn->commit();
+
+            // Show success message
+            $message = "Friend request approved!";
+        } catch (Exception $e) {
+            // Rollback on error
+            $conn->rollback();
+            $message = "Error approving request: " . $e->getMessage();
         }
     } elseif ($action === 'reject') {
         // Reject the friend request
@@ -61,14 +77,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
             DELETE FROM Friends 
             WHERE MemberID1 = $request_id AND MemberID2 = $user_id AND Status = 'Pending'";
         if ($conn->query($reject_query)) {
-            echo "<div class='message success'>Friend request rejected.</div>";
+            $message = "Friend request rejected.";
         } else {
-            echo "<div class='message error'>Error rejecting request: " . $conn->error . "</div>";
+            $message = "Error rejecting request: " . $conn->error;
         }
     }
 
     // Refresh the page to reflect changes
-    header("Location: requests.php");
+    echo "<meta http-equiv='refresh' content='0'>";
     exit();
 }
 ?>
@@ -132,12 +148,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
             box-shadow: 0px 0px 5px 0px #ccc;
             justify-content: space-between;
         }
-        .request-card img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
         .request-info {
             display: flex;
             align-items: center;
@@ -167,6 +177,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
         .reject-button:hover {
             background-color: #cc0000;
         }
+        .message {
+            text-align: center;
+            font-weight: bold;
+            margin: 20px;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
     </style>
 </head>
 <body>
@@ -184,6 +203,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
     
     <div class="container">
         <h2>Friend Requests</h2>
+        <?php if (!empty($message)): ?>
+            <div class="message"><?php echo htmlspecialchars($message); ?></div>
+        <?php endif; ?>
         <div class="requests-list">
             <?php if (empty($friend_requests)): ?>
                 <p>No friend requests found.</p>
@@ -191,16 +213,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
                 <?php foreach ($friend_requests as $request): ?>
                     <div class="request-card">
                         <div class="request-info">
-                            <img src="<?php echo htmlspecialchars($request['requester_pic'] ?? 'default.jpg'); ?>" alt="<?php echo htmlspecialchars($request['requester_name']); ?>">
                             <div><strong><?php echo htmlspecialchars($request['requester_name']); ?></strong></div>
                         </div>
                         <div class="request-actions">
-                            <form action="requests.php" method="post" style="display:inline;">
+                            <form action="" method="post" style="display:inline;">
                                 <input type="hidden" name="request_id" value="<?php echo $request['requester_id']; ?>">
                                 <input type="hidden" name="action" value="approve">
                                 <button type="submit" class="approve-button">Approve</button>
                             </form>
-                            <form action="requests.php" method="post" style="display:inline;">
+                            <form action="" method="post" style="display:inline;">
                                 <input type="hidden" name="request_id" value="<?php echo $request['requester_id']; ?>">
                                 <input type="hidden" name="action" value="reject">
                                 <button type="submit" class="reject-button">Reject</button>

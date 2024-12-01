@@ -30,8 +30,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['new_friend'])) {
 
     if (!empty($new_friend)) {
         // Check if the friend exists in the Member table
-        $friend_query = "SELECT MemberID FROM Member WHERE Pseudonym = '$new_friend'";
-        $friend_result = $conn->query($friend_query);
+        $friend_query = "SELECT MemberID FROM Member WHERE Pseudonym = ?";
+        $stmt = $conn->prepare($friend_query);
+        $stmt->bind_param("s", $new_friend);
+        $stmt->execute();
+        $friend_result = $stmt->get_result();
 
         if ($friend_result && $friend_result->num_rows > 0) {
             $friend_data = $friend_result->fetch_assoc();
@@ -41,16 +44,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['new_friend'])) {
             $check_friend_query = "
                 SELECT * 
                 FROM Friends 
-                WHERE (MemberID1 = $user_id AND MemberID2 = $friend_id) 
-                   OR (MemberID1 = $friend_id AND MemberID2 = $user_id)";
-            $check_friend_result = $conn->query($check_friend_query);
+                WHERE (MemberID1 = ? AND MemberID2 = ?) 
+                   OR (MemberID1 = ? AND MemberID2 = ?)";
+            $stmt = $conn->prepare($check_friend_query);
+            $stmt->bind_param("iiii", $user_id, $friend_id, $friend_id, $user_id);
+            $stmt->execute();
+            $check_friend_result = $stmt->get_result();
 
             if ($check_friend_result && $check_friend_result->num_rows === 0) {
                 // Add the friend relationship with status 'Pending'
                 $add_friend_query = "
                     INSERT INTO Friends (MemberID1, MemberID2, DateStarted, Status) 
-                    VALUES ($user_id, $friend_id, NOW(), 'Pending')";
-                if ($conn->query($add_friend_query)) {
+                    VALUES (?, ?, NOW(), 'Pending')";
+                $stmt = $conn->prepare($add_friend_query);
+                $stmt->bind_param("ii", $user_id, $friend_id);
+                if ($stmt->execute()) {
                     $message = "<div class='message success'>Friend request sent to $new_friend!</div>";
                 } else {
                     $message = "<div class='message error'>Error adding friend: " . $conn->error . "</div>";
@@ -67,14 +75,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['new_friend'])) {
 // Fetch friends list
 $friends_list = [];
 $friends_query = "
-    SELECT M.MemberID, M.Pseudonym
+    SELECT M.MemberID, CONCAT(M.FirstName, ' ', M.LastName) AS FullName, M.Pseudonym
     FROM Friends F
     INNER JOIN Member M 
         ON (F.MemberID1 = M.MemberID OR F.MemberID2 = M.MemberID)
-    WHERE (F.MemberID1 = $user_id OR F.MemberID2 = $user_id) 
+    WHERE (F.MemberID1 = ? OR F.MemberID2 = ?) 
       AND F.Status = 'Accepted' 
-      AND M.MemberID != $user_id";
-$result = $conn->query($friends_query);
+      AND M.MemberID != ?";
+$stmt = $conn->prepare($friends_query);
+$stmt->bind_param("iii", $user_id, $user_id, $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
 if ($result) {
     while ($row = $result->fetch_assoc()) {
@@ -223,18 +234,21 @@ if ($result) {
         
         <!-- Friends List Section -->
         <h2>Friends List</h2>
-        <div class="friends-list" id="friends-list">
-            <?php if (empty($friends_list)): ?>
-                <p>No friends found.</p>
-            <?php else: ?>
-                <?php foreach ($friends_list as $friend): ?>
-                    <div class="friend-card">
-                        <img src="<?php echo htmlspecialchars($friend['ProfilePic'] ?? 'default.jpg'); ?>" alt="<?php echo htmlspecialchars($friend['Pseudonym']); ?>">
-                        <a href="user_profile.php?id=<?php echo $friend['MemberID']; ?>"><?php echo htmlspecialchars($friend['Pseudonym']); ?></a>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
+<div class="friends-list" id="friends-list">
+    <?php if (empty($friends_list)): ?>
+        <p>No friends found.</p>
+    <?php else: ?>
+        <?php foreach ($friends_list as $friend): ?>
+            <div class="friend-card">
+                <img src="<?php echo htmlspecialchars($friend['ProfilePic'] ?? 'default.jpg', ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($friend['FullName'] ?? 'Unnamed User', ENT_QUOTES, 'UTF-8'); ?>">
+                <a href="user_profile.php?id=<?php echo $friend['MemberID']; ?>">
+                    <?php echo htmlspecialchars($friend['FullName'] ?? 'Unnamed User', ENT_QUOTES, 'UTF-8'); ?>
+                </a>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
 
         <!-- Add Friend Form -->
         <form action="friends.php" method="POST">
