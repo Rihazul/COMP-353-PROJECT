@@ -30,11 +30,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['new_friend'])) {
 
     if (!empty($new_friend)) {
         // Check if the friend exists in the Member table
-        $friend_query = "SELECT MemberID FROM Member WHERE Pseudonym = ?";
-        $stmt = $conn->prepare($friend_query);
-        $stmt->bind_param("s", $new_friend);
-        $stmt->execute();
-        $friend_result = $stmt->get_result();
+// Split the full name into first and last name
+$names = explode(' ', $new_friend, 2);
+
+if (count($names) == 2) { // Ensure both first and last name are provided
+    $first_name = $conn->real_escape_string($names[0]);
+    $last_name = $conn->real_escape_string($names[1]);
+
+    // UPDATED: Query to check if the friend exists by first and last name
+    $friend_query = "SELECT MemberID FROM Member WHERE FirstName = ? AND LastName = ?";
+    $stmt = $conn->prepare($friend_query);
+    $stmt->bind_param("ss", $first_name, $last_name);
+    $stmt->execute();
+    $friend_result = $stmt->get_result();
+} else {
+    $message = "<div class='message error'>Please provide both first and last names.</div>";
+}
+
 
         if ($friend_result && $friend_result->num_rows > 0) {
             $friend_data = $friend_result->fetch_assoc();

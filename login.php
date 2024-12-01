@@ -42,19 +42,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
 
-            // Verify password (plaintext comparison)
-            if ($password === $user['Password']) {
+            // Verify password (plaintext comparison, consider hashing for better security)
+            if ($password === $user['Password']) { 
                 // Set session variables
                 $_SESSION['user_id'] = $user['MemberID'];
                 $_SESSION['user_name'] = $user['Pseudonym'];
                 $_SESSION['user_privilege'] = $user['Privilege'];
 
-                // Redirect based on privilege
-                if ($user['Privilege'] === 'admin') {
-                    header("Location: admin.php");
-                } else {
-                    header("Location: profile.php");
-                }
+                // Output JavaScript to store user ID in local storage and redirect
+                $redirect_url = $user['Privilege'] === 'admin' ? "admin.php" : "profile.php";
+                echo "
+                <script>
+                    localStorage.setItem('user_id', " . json_encode($user['MemberID']) . ");
+                    localStorage.setItem('user_name', " . json_encode($user['Pseudonym']) . ");
+                    setTimeout(() => {
+                        window.location.href = '" . $redirect_url . "';
+                    }, 100);
+                </script>";
                 exit();
             } else {
                 $login_message = "Incorrect email or password.";
@@ -66,6 +70,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $login_message = "Please fill in all fields.";
     }
 }
+
+
 ?>
 
 <!DOCTYPE html>
