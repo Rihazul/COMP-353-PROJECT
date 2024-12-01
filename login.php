@@ -6,6 +6,7 @@ $servername = "upc353.encs.concordia.ca";
 $username = "upc353_2";
 $password = "SleighParableSystem73";
 $dbname = "upc353_2";
+
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
@@ -13,15 +14,26 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Handle login submission
+// Redirect already logged-in users
+if (isset($_SESSION['user_id'])) {
+    if ($_SESSION['user_privilege'] === 'admin') {
+        header("Location: admin.php");
+    } else {
+        header("Location: profile.php");
+    }
+    exit();
+}
+
 $login_message = "";
+
+// Handle login form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
 
     if (!empty($email) && !empty($password)) {
         // Query to verify user credentials
-        $query = "SELECT MemberID, Pseudonym, Password FROM Member WHERE Email = ?";
+        $query = "SELECT MemberID, Pseudonym, Password, Privilege FROM Member WHERE Email = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -30,13 +42,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
 
-            // Verify password
-            if (password_verify($password, $user['Password'])) {
+            // Verify password (plaintext comparison)
+            if ($password === $user['Password']) {
+                // Set session variables
                 $_SESSION['user_id'] = $user['MemberID'];
                 $_SESSION['user_name'] = $user['Pseudonym'];
+                $_SESSION['user_privilege'] = $user['Privilege'];
 
-                // Redirect to profile page
-                header("Location: profile.php");
+                // Redirect based on privilege
+                if ($user['Privilege'] === 'admin') {
+                    header("Location: admin.php");
+                } else {
+                    header("Location: profile.php");
+                }
                 exit();
             } else {
                 $login_message = "Incorrect email or password.";
@@ -49,6 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -130,19 +149,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 </body>
 </html>
-<?php
-
-
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] == 'admin') {
-    header("Location: admin.php"); // Redirect to login page if not admin
-    exit();
-}
-else
-header("Location: profile.php");
-
-
-//Database connection
-//include 'db_connection.php';
-//$conn = OpenCon();
-
-?>
