@@ -1,86 +1,110 @@
 <?php
-// Start session (if needed for user authentication)
 session_start();
 
-// Enable error reporting for debugging
+// Enable error reporting for debugging (disable in production)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // Database credentials
 $servername = "upc353.encs.concordia.ca";
-$username = "upc353_2";
-$password = "SleighParableSystem73";
+$db_username = "upc353_2";
+$db_password = "SleighParableSystem73";
 $dbname = "upc353_2";
 
-// Connect to the database
-$conn = new mysqli($servername, $username, $password, $dbname);
+// Connect to the database using mysqli with error handling
+$conn = new mysqli($servername, $db_username, $db_password, $dbname);
 
 // Check database connection
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    die("<div class='message error'>Connection failed: " . htmlspecialchars($conn->connect_error) . "</div>");
 }
 
-// Set user ID (replace with dynamic session data in production)
-$user_id = 1;
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    // Redirect to login page or show an error message
+    header("Location: login.php");
+    exit();
+}
 
+// Get user_id from session and ensure it's an integer
+$user_id = (int)$_SESSION['user_id'];
+
+// Initialize message variable
+$message = "";
+echo "User ID: $user_id<br>";
 // Handle friend addition
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['new_friend'])) {
     $new_friend = trim($_POST['new_friend']);
 
     if (!empty($new_friend)) {
-        // Check if the friend exists in the Member table
-// Split the full name into first and last name
-$names = explode(' ', $new_friend, 2);
+        // Split the full name into first and last name
+        $names = explode(' ', $new_friend, 2);
 
-if (count($names) == 2) { // Ensure both first and last name are provided
-    $first_name = $conn->real_escape_string($names[0]);
-    $last_name = $conn->real_escape_string($names[1]);
+        if (count($names) == 2) { // Ensure both first and last name are provided
+            $first_name = $names[0];
+            $last_name = $names[1];
 
-    // UPDATED: Query to check if the friend exists by first and last name
-    $friend_query = "SELECT MemberID FROM Member WHERE FirstName = ? AND LastName = ?";
-    $stmt = $conn->prepare($friend_query);
-    $stmt->bind_param("ss", $first_name, $last_name);
-    $stmt->execute();
-    $friend_result = $stmt->get_result();
-} else {
-    $message = "<div class='message error'>Please provide both first and last names.</div>";
-}
+            // Prepare statement to check if the friend exists by first and last name
+            $friend_query = "SELECT MemberID FROM Member WHERE FirstName = ? AND LastName = ?";
+            if ($stmt = $conn->prepare($friend_query)) {
+                $stmt->bind_param("ss", $first_name, $last_name);
+                $stmt->execute();
+                $stmt->store_result();
 
+                if ($stmt->num_rows > 0) {
+                    $stmt->bind_result($friend_id);
+                    $stmt->fetch();
+                    $stmt->close();
 
-        if ($friend_result && $friend_result->num_rows > 0) {
-            $friend_data = $friend_result->fetch_assoc();
-            $friend_id = $friend_data['MemberID'];
+                    // Check if a friendship already exists
+                    $check_friend_query = "
+                        SELECT * 
+                        FROM Friends 
+                        WHERE (MemberID1 = ? AND MemberID2 = ?) 
+                           OR (MemberID1 = ? AND MemberID2 = ?)";
+                    if ($stmt = $conn->prepare($check_friend_query)) {
+                        $stmt->bind_param("iiii", $user_id, $friend_id, $friend_id, $user_id);
+                        $stmt->execute();
+                        $stmt->store_result();
 
-            // Check if a friendship already exists
-            $check_friend_query = "
-                SELECT * 
-                FROM Friends 
-                WHERE (MemberID1 = ? AND MemberID2 = ?) 
-                   OR (MemberID1 = ? AND MemberID2 = ?)";
-            $stmt = $conn->prepare($check_friend_query);
-            $stmt->bind_param("iiii", $user_id, $friend_id, $friend_id, $user_id);
-            $stmt->execute();
-            $check_friend_result = $stmt->get_result();
+                        if ($stmt->num_rows === 0) {
+                            $stmt->close();
 
-            if ($check_friend_result && $check_friend_result->num_rows === 0) {
-                // Add the friend relationship with status 'Pending'
-                $add_friend_query = "
-                    INSERT INTO Friends (MemberID1, MemberID2, DateStarted, Status) 
-                    VALUES (?, ?, NOW(), 'Pending')";
-                $stmt = $conn->prepare($add_friend_query);
-                $stmt->bind_param("ii", $user_id, $friend_id);
-                if ($stmt->execute()) {
-                    $message = "<div class='message success'>Friend request sent to $new_friend!</div>";
+                            // Add the friend relationship with status 'Pending'
+                            $add_friend_query = "
+                                INSERT INTO Friends (MemberID1, MemberID2, DateStarted, Status) 
+                                VALUES (?, ?, NOW(), 'Pending')";
+                            if ($stmt = $conn->prepare($add_friend_query)) {
+                                $stmt->bind_param("ii", $user_id, $friend_id);
+                                if ($stmt->execute()) {
+                                    $message = "<div class='message success'>Friend request sent to " . htmlspecialchars($new_friend) . "!</div>";
+                                } else {
+                                    $message = "<div class='message error'>Error adding friend: " . htmlspecialchars($stmt->error) . "</div>";
+                                }
+                                $stmt->close();
+                            } else {
+                                $message = "<div class='message error'>Error preparing friend addition statement.</div>";
+                            }
+                        } else {
+                            $message = "<div class='message error'>You are already friends or a request is pending with " . htmlspecialchars($new_friend) . ".</div>";
+                            $stmt->close();
+                        }
+                    } else {
+                        $message = "<div class='message error'>Error preparing friendship check statement.</div>";
+                    }
                 } else {
-                    $message = "<div class='message error'>Error adding friend: " . $conn->error . "</div>";
+                    $message = "<div class='message error'>User " . htmlspecialchars($new_friend) . " not found.</div>";
+                    $stmt->close();
                 }
             } else {
-                $message = "<div class='message error'>You are already friends or a request is pending with $new_friend.</div>";
+                $message = "<div class='message error'>Error preparing friend lookup statement.</div>";
             }
         } else {
-            $message = "<div class='message error'>User $new_friend not found.</div>";
+            $message = "<div class='message error'>Please provide both first and last names.</div>";
         }
+    } else {
+        $message = "<div class='message error'>Friend name cannot be empty.</div>";
     }
 }
 
@@ -91,20 +115,27 @@ $friends_query = "
     FROM Friends F
     INNER JOIN Member M 
         ON (F.MemberID1 = M.MemberID OR F.MemberID2 = M.MemberID)
-    WHERE (F.MemberID1 = ? OR F.MemberID2 = ?) 
-      AND F.Status = 'Accepted' 
+    WHERE (F.MemberID1 = ? OR F.MemberID2 = ?)
+      AND F.Status = 'Accepted'
       AND M.MemberID != ?";
-$stmt = $conn->prepare($friends_query);
-$stmt->bind_param("iii", $user_id, $user_id, $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
 
-if ($result) {
+// Prepare statement
+if ($stmt = $conn->prepare($friends_query)) {
+    $stmt->bind_param("iii", $user_id, $user_id, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
     while ($row = $result->fetch_assoc()) {
         $friends_list[] = $row;
     }
+    $stmt->close();
+} else {
+    $message .= "<div class='message error'>Error preparing friends list statement.</div>";
 }
+
+$conn->close();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -145,6 +176,7 @@ if ($result) {
             width: 80%;
             margin: auto;
             overflow: hidden;
+            padding: 20px 0;
         }
         form {
             padding: 20px;
@@ -199,6 +231,7 @@ if ($result) {
             height: 50px;
             border-radius: 50%;
             margin-right: 10px;
+            object-fit: cover;
         }
         .friend-card a {
             text-decoration: none;
@@ -220,6 +253,26 @@ if ($result) {
             background-color: #f8d7da;
             color: #721c24;
         }
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+            }
+            form input[type="text"] {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            form input[type="submit"] {
+                width: 100%;
+            }
+            .friend-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .friend-card img {
+                margin-bottom: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -230,13 +283,13 @@ if ($result) {
                 <a href="profile.php">Profile</a>
                 <a href="friends.php">Friends</a>
                 <a href="photos.php">Photos</a>
-                <a href="login.php">Logout</a>
+                <a href="logout.php">Logout</a>
             </div>
         </div>
     </header>
     
     <div class="container">
-        <?php if (isset($message)) echo $message; ?>
+        <?php if (!empty($message)) echo $message; ?>
 
         <!-- Search Form -->
         <form action="search_friends.php" method="post">
@@ -246,25 +299,25 @@ if ($result) {
         
         <!-- Friends List Section -->
         <h2>Friends List</h2>
-<div class="friends-list" id="friends-list">
-    <?php if (empty($friends_list)): ?>
-        <p>No friends found.</p>
-    <?php else: ?>
-        <?php foreach ($friends_list as $friend): ?>
-            <div class="friend-card">
-                <img src="<?php echo htmlspecialchars($friend['ProfilePic'] ?? 'default.jpg', ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($friend['FullName'] ?? 'Unnamed User', ENT_QUOTES, 'UTF-8'); ?>">
-                <a href="user_profile.php?id=<?php echo $friend['MemberID']; ?>">
-                    <?php echo htmlspecialchars($friend['FullName'] ?? 'Unnamed User', ENT_QUOTES, 'UTF-8'); ?>
-                </a>
-            </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</div>
-
-
+        <div class="friends-list" id="friends-list">
+            <?php if (empty($friends_list)): ?>
+                <p>No friends found.</p>
+            <?php else: ?>
+                <?php foreach ($friends_list as $friend): ?>
+                    <div class="friend-card">
+                        <!-- Use a default image for all friends -->
+                        <img src="default.jpg" alt="<?php echo htmlspecialchars($friend['FullName'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <a href="user_profile.php?id=<?php echo htmlspecialchars($friend['MemberID'], ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($friend['FullName'], ENT_QUOTES, 'UTF-8'); ?>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+        
         <!-- Add Friend Form -->
-        <form action="friends.php" method="POST">
-            <input type="text" name="new_friend" placeholder="Add a new friend">
+        <form action="friends.php" method="POST" id="add-friend-form">
+            <input type="text" name="new_friend" placeholder="Add a new friend (First Last)">
             <input type="submit" value="Add Friend">
         </form>
     </div>
