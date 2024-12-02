@@ -8,7 +8,8 @@ ini_set('error_log', 'php_errors.log'); // Specify the log file location
 error_reporting(E_ALL); // Report all PHP errors
 
 // Mock user session for demonstration
-$_SESSION['user_id'] = 4; // Replace with dynamic session data
+ // Replace with dynamic session data
+$user_id = $_SESSION['user_id'];
 
 // Database connection
 $servername = "upc353.encs.concordia.ca";
@@ -153,13 +154,23 @@ $send_query = "INSERT INTO Messages (SenderMemberID, RecipientMemberID, Content,
         .chat-box { width: 70%; margin-left: 5%; background-color: white; border-radius: 10px; box-shadow: 0px 0px 10px 0px #ccc; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; max-height: 500px; }
         .chat-history { overflow-y: auto; flex-grow: 1; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px; }
         .message { padding: 10px; border-radius: 10px; margin: 5px 0; max-width: 70%; }
-        .message.sent { background-color: #9e34eb; color: white; align-self: flex-end; }
-        .message.received { background-color: #f1f1f1; color: #333; align-self: flex-start; }
+.message.sent {
+    background-color: #9e34eb; /* Your chosen color for sent messages */
+    color: white;
+    align-self: flex-end;
+}
+
+.message.received {
+    background-color: #f1f1f1; /* Grey color for received messages */
+    color: #333;
+    align-self: flex-start;
+}
         .message.error { background-color: #ff4d4d; color: white; align-self: flex-end; font-style: italic; }
         .message-form { display: flex; gap: 10px; }
         .message-form input[type="text"] { flex-grow: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
         .message-form button { padding: 10px 20px; background-color: #9e34eb; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .message-form button:hover { background-color: #7a29b8; }
+		
     </style>
 </head>
 <body>
@@ -192,7 +203,7 @@ $send_query = "INSERT INTO Messages (SenderMemberID, RecipientMemberID, Content,
     </div>
 
     <script>
-        let currentRecipientId = null;
+        const currentUserId = <?php echo json_encode($user_id); ?>;
 
         function openChat(friendId, friendName) {
             currentRecipientId = friendId;
@@ -200,21 +211,22 @@ $send_query = "INSERT INTO Messages (SenderMemberID, RecipientMemberID, Content,
             loadChatHistory(friendId, friendName);
         }
 
-        function loadChatHistory(friendId, friendName) {
-            fetch(`?action=fetch_chat_history&friend_id=${friendId}`)
-                .then(response => response.json())
-                .then(messages => {
-                    const chatHistory = document.getElementById('chat-history');
-                    chatHistory.innerHTML = `<h3>Chat with ${friendName}</h3>`;
-                    messages.forEach(msg => {
-                        const div = document.createElement('div');
-                        div.className = `message ${msg.sender_id === currentRecipientId ? 'received' : 'sent'}`;
-                        div.textContent = msg.message_text;
-                        chatHistory.appendChild(div);
-                    });
-                    chatHistory.scrollTop = chatHistory.scrollHeight;
-                });
-        }
+function loadChatHistory(friendId, friendName) {
+    fetch(`?action=fetch_chat_history&friend_id=${friendId}`)
+        .then(response => response.json())
+        .then(messages => {
+            const chatHistory = document.getElementById('chat-history');
+            chatHistory.innerHTML = `<h3>Chat with ${friendName}</h3>`;
+            messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.sender_id === currentUserId ? 'sent' : 'received'}`;
+                div.textContent = msg.message_text;
+                chatHistory.appendChild(div);
+            });
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        });
+}
+
 
 document.getElementById('message-form').addEventListener('submit', function(event) {
     event.preventDefault();
