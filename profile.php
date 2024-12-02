@@ -1,3 +1,10 @@
+<?php
+        session_start();
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: login.php");
+            exit();
+        }
+        ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -199,6 +206,16 @@
             background-color: #7a29b8;
         }
     </style>
+    <script>
+        function logout() {
+        localStorage.clear();
+        fetch('logout.php', { method: 'POST' })
+            .then(() => {
+                window.location.href = 'login.php';
+            })
+            .catch(error => console.error('Error logging out:', error));
+    }
+    </script>
 </head>
 <body>
     
@@ -211,7 +228,7 @@
             <input type="text" name="search" id="search_box" placeholder="Search for people">
             <div class="search-icon"></div>
         </div>
-        <button class="logout-button" onclick="window.location.href='login.php'">Log out</button>
+        <button class="logout-button" onclick="logout()">Log out</button>
     </div>
 
     <!-- profile content/ cover part -->
@@ -254,8 +271,8 @@
         <!-- right side : post form and posts -->
         <div class="posts-list">
             <div class="post-form">
-                <form action="post_handler.php" method="post">
-                    <textarea name="post_content" rows="4" placeholder="What's on your mind?"></textarea>
+                <form action="post.php" method="post">
+            
                     <button type="submit">Post</button>
                 </form>
             </div>
@@ -273,3 +290,4 @@
     </div>
 </body>
 </html>
+
