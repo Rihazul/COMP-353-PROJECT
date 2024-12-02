@@ -21,8 +21,29 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Set the user ID (replace with dynamic session-based user ID in production)
-$user_id = 4;
+// Retrieve the user_id from GET or POST requests
+// Check if the user_id is available in PHP
+if (!isset($_COOKIE['user_id'])) {
+    // Inject JavaScript to retrieve user_id from localStorage and reload the page
+    echo "<script>
+        const userId = localStorage.getItem('user_id');
+        if (userId) {
+            document.cookie = 'user_id=' + userId + '; path=/';
+            location.reload();
+        } else {
+            alert('User ID not found in local storage. Redirecting to login.');
+            window.location.href = 'login.php';
+        }
+    </script>";
+    exit();
+}
+
+// Retrieve the user_id from the cookie
+$user_id = intval($_COOKIE['user_id']);
+if ($user_id <= 0) {
+    die("Invalid user ID. Please log in again.");
+}
+
 
 // Fetch pending friend requests
 $friend_requests = [];
@@ -187,6 +208,43 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['request_id'])) {
             color: red;
         }
     </style>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        console.log("JavaScript is loaded and running.");
+
+        // Check for user_id in localStorage
+        const userId = localStorage.getItem("user_id");
+        if (!userId) {
+            console.error("No user_id found in localStorage.");
+            alert("User ID not found in local storage. Please log in again.");
+            window.location.href = "login.php"; // Redirect to login page
+        } else {
+            console.log("Retrieved user_id from localStorage:", userId);
+
+            // Append user_id to links
+            const links = document.querySelectorAll("a");
+            links.forEach(link => {
+                const url = new URL(link.href);
+                url.searchParams.set("user_id", userId);
+                link.href = url.toString();
+                console.log("Updated link with user_id:", link.href);
+            });
+
+            // Append user_id to forms
+            const forms = document.querySelectorAll("form");
+            forms.forEach(form => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "user_id";
+                input.value = userId;
+                form.appendChild(input);
+                console.log("Form updated with user_id:", form);
+            });
+        }
+    });
+</script>
+
+
 </head>
 <body>
     <header>
