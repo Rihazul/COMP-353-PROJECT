@@ -1,16 +1,9 @@
-<?php
-        session_start();
-        if (!isset($_SESSION['user_id'])) {
-            header("Location: login.php");
-            exit();
-        }
-        ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COSN Profile</title>
+    <title>COSN User Profile</title>
     <style>
         body {
             font-family: Tahoma, sans-serif;
@@ -39,16 +32,6 @@
             padding: 4px 4px 4px 30px;
             font-size: 17px;
             height: 25px;
-        }
-        .search-icon {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            background: url('search_icon.png') no-repeat center center;
-            background-size: contain;
         }
         .logout-button {
             background-color: #fff;
@@ -85,11 +68,10 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            
         }
         .profile-pic-container {
             position: absolute;
-            top: 200px; /* Adjust to position the profile picture */
+            top: 200px;
             left: 50%;
             width: 100px;
             height: 100px;
@@ -103,12 +85,11 @@
             height: 100px;
             border-radius: 50%;
         }
-
         .profile-name {
             font-size: 24px;
             font-weight: bold;
             color: #333;
-
+            margin-top: 15px;
         }
         .profile-buttons {
             margin-top: 20px;
@@ -129,47 +110,16 @@
         }
         .main-content {
             width: 900px;
-            margin: 100px auto 20px auto; /* Adjust margin to account for profile pic */
+            margin: 100px auto 20px auto;
             display: flex;
             justify-content: space-between;
         }
-        .friends-list, .posts-list {
-            width: 48%;
+        .posts-list {
+            width: 100%;
             background-color: #f9f9f9;
             padding: 10px;
             border-radius: 10px;
             box-shadow: 0px 0px 5px 0px #ccc;
-        }
-        .friends-list {
-            margin-right: 2%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px; /* Add space between friend cards */
-        }
-        .friend-card {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0px 0px 5px 0px #ccc;
-        }
-        .friend-card img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-        .friend-card div {
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-        }
-        .friends-list img, .posts-list img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            margin: 10px;
         }
         .post {
             background-color: white;
@@ -178,116 +128,65 @@
             border-radius: 10px;
             box-shadow: 0px 0px 5px 0px #ccc;
         }
-        .post-form {
-            margin-bottom: 20px;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-radius: 10px;
-            box-shadow: 0px 0px 5px 0px #ccc;
-        }
-        .post-form textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            resize: none;
-        }
-        .post-form button {
-            margin-top: 10px;
-            padding: 10px 20px;
-            background-color: #9e34eb;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .post-header {
             font-weight: bold;
+            color: #9e34eb;
         }
-        .post-form button:hover {
-            background-color: #7a29b8;
+        .post-content {
+            margin-top: 10px;
+            color: #333;
+        }
+        .post-time {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #777;
         }
     </style>
-    <script>
-        function logout() {
-        localStorage.clear();
-        fetch('logout.php', { method: 'POST' })
-            .then(() => {
-                window.location.href = 'login.php';
-            })
-            .catch(error => console.error('Error logging out:', error));
-    }
-    </script>
 </head>
 <body>
     
-    <!-- top purple bar -->    
+    <!-- Top bar -->
     <div id="purple_bar">
         <div style="font-size: 45px; font-weight: bold;">
             COSN
         </div>
         <div class="search-wrapper">
             <input type="text" name="search" id="search_box" placeholder="Search for people">
-            <div class="search-icon"></div>
         </div>
-        <button class="logout-button" onclick="logout()">Log out</button>
+        <button class="logout-button" onclick="window.location.href='login.php'">Log out</button>
     </div>
 
-    <!-- profile content/ cover part -->
+    <!-- Profile content -->
     <div class="profile-content">
         <div class="cover-box">
             <img src="https://via.placeholder.com/900x400?text=Cover+Photo" class="cover-pic" alt="Cover Photo">
             <div class="profile-pic-container">
                 <img src="/img/default-profile-picture.png" class="profile-pic" alt="Profile Photo">
-                <div class="profile-name">Jone Doe</div>
+                <div class="profile-name">John Doe</div>
             </div>
         </div>
         <div class="profile-buttons">
-            <button onclick="window.location.href='timeline.php'">Timeline</button>
-            <button onclick="window.location.href='about.php'">About</button>
-            <button onclick="window.location.href='friends.php'">Friends</button>
-            <button onclick="window.location.href='photos.php'">Photos</button>
-            <button onclick="window.location.href='settings.php'">Settings</button>
+            <button onclick="window.location.href='message.php?user_id=123'">Message</button>
+            <button onclick="window.location.href='block_report.php?user_id=123'">Block/Report</button>
+            <button onclick="window.location.href='timeline.php'">Back to Timeline</button>
         </div>
     </div>
 
-    <!-- profile content/ main part -->
+    <!-- Posts -->
     <div class="main-content">
-        <!-- left side : friends -->
-        <div class="friends-list">
-            <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Friends</div>
-            <div class="friend-card">
-                <img src="/img/default-profile-picture.png" alt="Friend 1">
-                <div>Friend 1</div>
-            </div>
-            <div class="friend-card">
-                <img src="/img/default-profile-picture.png" alt="Friend 2">
-                <div>Friend 2</div>
-            </div>
-            <div class="friend-card">
-                <img src="/img/default-profile-picture.png" alt="Friend 3">
-                <div>Friend 3</div>
-            </div>
-        </div>
-        
-        <!-- right side : post form and posts -->
         <div class="posts-list">
-            <div class="post-form">
-                <form action="post.php" method="post">
-            
-                    <button type="submit">Post</button>
-                </form>
-            </div>
             <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Posts</div>
             <div class="post">
-                <p>Post content 1</p>
+                <div class="post-header">John Doe</div>
+                <div class="post-content">This is a post from John Doe.</div>
+                <div class="post-time">2 hours ago</div>
             </div>
             <div class="post">
-                <p>Post content 2</p>
-            </div>
-            <div class="post">
-                <p>Post content 3</p>
+                <div class="post-header">John Doe</div>
+                <div class="post-content">Another update from John Doe!</div>
+                <div class="post-time">5 hours ago</div>
             </div>
         </div>
     </div>
 </body>
 </html>
-

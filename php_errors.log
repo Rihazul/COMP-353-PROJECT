@@ -18,3 +18,5 @@ Stack trace:
 #0 C:\xampp\htdocs\message.php(115): mysqli->prepare('INSERT INTO Mes...')
 #1 {main}
   thrown in C:\xampp\htdocs\message.php on line 115
+[02-Dec-2024 20:46:52 Europe/Berlin] PHP Warning:  Undefined array key "user_id" in C:\xampp\htdocs\message.php on line 12
+[02-Dec-2024 20:46:52 Europe/Berlin] PHP Warning:  Undefined array key "user_id" in C:\xampp\htdocs\message.php on line 26
