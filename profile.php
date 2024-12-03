@@ -1,10 +1,46 @@
 <?php
-        session_start();
-        if (!isset($_SESSION['user_id'])) {
-            header("Location: login.php");
-            exit();
-        }
-        ?>
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Database connection
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Get user data
+$user_id = $_SESSION['user_id'];
+$user_query = "SELECT * FROM Member WHERE MemberID = ?";
+$stmt = $conn->prepare($user_query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$user_result = $stmt->get_result();
+$user = $user_result->fetch_assoc();
+
+// If no user found, log them out
+if (!$user) {
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+
+// Get user's posts
+$posts_query = "SELECT * FROM Posts WHERE MemberID = ? ORDER BY DatePosted DESC";
+$post_stmt = $conn->prepare($posts_query);
+$post_stmt->bind_param("i", $user_id);
+$post_stmt->execute();
+$posts_result = $post_stmt->get_result();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,7 +121,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            
+
         }
         .profile-pic-container {
             position: absolute;
@@ -204,90 +240,74 @@
         }
         .post-form button:hover {
             background-color: #7a29b8;
-        }
-    </style>
+        }    </style>
     <script>
         function logout() {
-        localStorage.clear();
-        fetch('logout.php', { method: 'POST' })
-            .then(() => {
-                window.location.href = 'login.php';
-            })
-            .catch(error => console.error('Error logging out:', error));
-    }
+            localStorage.clear();
+            fetch('logout.php', { method: 'POST' })
+                .then(() => {
+                    window.location.href = 'login.php';
+                })
+                .catch(error => console.error('Error logging out:', error));
+        }
     </script>
 </head>
 <body>
-    
-    <!-- top purple bar -->    
-    <div id="purple_bar">
-        <div style="font-size: 45px; font-weight: bold;">
-            COSN
+<!-- Top purple bar -->
+<div id="purple_bar">
+    <div style="font-size: 45px; font-weight: bold;">
+        COSN
+    </div>
+    <div class="search-wrapper">
+        <input type="text" name="search" id="search_box" placeholder="Search for people">
+        <div class="search-icon"></div>
+    </div>
+    <button class="logout-button" onclick="logout()">Log out</button>
+</div>
+
+<!-- Profile content/ cover part -->
+<div class="profile-content">
+    <div class="cover-box">
+        <img src="<?= $user['CoverPhoto'] ?? 'https://via.placeholder.com/900x400?text=Cover+Photo' ?>"
+             class="cover-pic" alt="Cover Photo">
+        <div class="profile-pic-container">
+            <img src="<?= $user['ProfilePhoto'] ?? '/img/default-profile-picture.png' ?>"
+                 class="profile-pic" alt="Profile Photo">
+            <div class="profile-name"><?= htmlspecialchars($user['FirstName'] . ' ' . $user['LastName']) ?></div>
         </div>
-        <div class="search-wrapper">
-            <input type="text" name="search" id="search_box" placeholder="Search for people">
-            <div class="search-icon"></div>
-        </div>
-        <button class="logout-button" onclick="logout()">Log out</button>
+    </div>
+    <div class="profile-buttons">
+        <button onclick="window.location.href='timeline.php'">Timeline</button>
+        <button onclick="window.location.href='friends.php'">Friends</button>
+        <button onclick="window.location.href='post.php'">Posts</button>
+        <button onclick="window.location.href='settings.php'">Settings</button>
+    </div>
+</div>
+
+<!-- Profile content/ main part -->
+<div class="main-content">
+    <!-- Left side: friends -->
+    <div class="friends-list">
+        <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Friends</div>
+        <!-- You can dynamically load friends here -->
     </div>
 
-    <!-- profile content/ cover part -->
-    <div class="profile-content">
-        <div class="cover-box">
-            <img src="https://via.placeholder.com/900x400?text=Cover+Photo" class="cover-pic" alt="Cover Photo">
-            <div class="profile-pic-container">
-                <img src="/img/default-profile-picture.png" class="profile-pic" alt="Profile Photo">
-                <div class="profile-name">Jone Doe</div>
+    <!-- Right side: post form and posts -->
+    <div class="posts-list">
+        <div class="post-form">
+            <form action="post.php" method="post">
+                <textarea name="post_content" placeholder="What's on your mind?" required></textarea>
+                <button type="submit">Post</button>
+            </form>
+        </div>
+        <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Posts</div>
+        <?php while ($post = $posts_result->fetch_assoc()): ?>
+            <div class="post">
+                <p><?= htmlspecialchars($post['TextContent']) ?></p>
+                <small>Posted on <?= $post['DatePosted'] ?></small>
             </div>
-        </div>
-        <div class="profile-buttons">
-            <button onclick="window.location.href='timeline.php'">Timeline</button>
-            <button onclick="window.location.href='about.php'">About</button>
-            <button onclick="window.location.href='friends.php'">Friends</button>
-            <button onclick="window.location.href='photos.php'">Photos</button>
-            <button onclick="window.location.href='settings.php'">Settings</button>
-        </div>
+        <?php endwhile; ?>
     </div>
-
-    <!-- profile content/ main part -->
-    <div class="main-content">
-        <!-- left side : friends -->
-        <div class="friends-list">
-            <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Friends</div>
-            <div class="friend-card">
-                <img src="/img/default-profile-picture.png" alt="Friend 1">
-                <div>Friend 1</div>
-            </div>
-            <div class="friend-card">
-                <img src="/img/default-profile-picture.png" alt="Friend 2">
-                <div>Friend 2</div>
-            </div>
-            <div class="friend-card">
-                <img src="/img/default-profile-picture.png" alt="Friend 3">
-                <div>Friend 3</div>
-            </div>
-        </div>
-        
-        <!-- right side : post form and posts -->
-        <div class="posts-list">
-            <div class="post-form">
-                <form action="post.php" method="post">
-            
-                    <button type="submit">Post</button>
-                </form>
-            </div>
-            <div style="font-size: 20px; color: #9e34eb; font-weight: bold;">Posts</div>
-            <div class="post">
-                <p>Post content 1</p>
-            </div>
-            <div class="post">
-                <p>Post content 2</p>
-            </div>
-            <div class="post">
-                <p>Post content 3</p>
-            </div>
-        </div>
-    </div>
+</div>
 </body>
 </html>
-
