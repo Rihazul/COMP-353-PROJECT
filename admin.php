@@ -1,10 +1,39 @@
 <?php
 session_start();
-
 // Database connection
-// include 'db_connection.php';
-// $conn = OpenCon();
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
 
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Fetch the total number of members
+$total_members_query = "SELECT COUNT(*) AS total_members FROM Member"; // Adjust table and column name based on your schema
+$total_members_result = mysqli_query($conn, $total_members_query);
+$total_members = mysqli_fetch_assoc($total_members_result)['total_members'];
+
+// Fetch the total number of groups
+$total_groups_query = "SELECT COUNT(*) AS total_groups FROM `Groups`"; // Enclose Groups in backticks
+$total_groups_result = mysqli_query($conn, $total_groups_query);
+$total_groups = mysqli_fetch_assoc($total_groups_result)['total_groups'];
+
+// Check if there are no groups
+if ($total_groups == 0) {
+    $no_groups_message = "No groups available. Please create a group.";
+} else {
+    $no_groups_message = ""; // Reset message if groups exist
+}
+
+// Fetch the total number of pending posts (assuming a 'ModerationStatus' column)
+$pending_posts_query = "SELECT COUNT(*) AS pending_posts FROM Posts WHERE ModerationStatus = 'Pending'"; // Adjust table and column name
+$pending_posts_result = mysqli_query($conn, $pending_posts_query);
+$pending_posts = mysqli_fetch_assoc($pending_posts_result)['pending_posts'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -159,6 +188,16 @@ session_start();
             font-size: 0.9em;
             padding: 10px;
         }
+
+        /* No Groups Alert */
+        .no-groups-alert {
+            background-color: #ffcccc;
+            padding: 15px;
+            border-radius: 5px;
+            color: #d8000c;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -174,6 +213,13 @@ session_start();
     <h1>Admin Dashboard</h1>
     <p>Welcome, Admin. Use the dashboard to manage members, groups, and content.</p>
 
+    <!-- No Groups Alert -->
+    <?php if ($no_groups_message): ?>
+        <div class="no-groups-alert">
+            <?php echo $no_groups_message; ?>
+        </div>
+    <?php endif; ?>
+
     <!-- Admin Navigation Menu -->
     <div class="admin-menu">
         <a href="manage_members.php">Manage Members</a>
@@ -186,9 +232,9 @@ session_start();
     <div class="admin-stats">
         <h3>Quick Stats</h3>
         <ul>
-            <li>Total Members: 150</li>
-            <li>Total Groups: 30</li>
-            <li>Pending Posts: 5</li>
+            <li>Total Members: <?php echo $total_members; ?></li>
+            <li>Total Groups: <?php echo $total_groups; ?></li>
+            <li>Pending Posts: <?php echo $pending_posts; ?></li>
         </ul>
     </div>
 
@@ -212,8 +258,11 @@ session_start();
 </body>
 </html>
 
-
 <?php
 // Close the database connection
-// CloseCon($conn);
+session_unset();
+session_destroy();
+header("Location: login.php");
+exit();
+$conn->close();
 ?>

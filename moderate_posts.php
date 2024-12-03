@@ -2,18 +2,28 @@
 session_start();
 
 // Database connection
-// include 'db_connection.php';
-// $conn = OpenCon();
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+
+
+// Query to get pending posts
+$sql = "SELECT * FROM Posts WHERE ModerationStatus = 'Pending'";
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
 
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Posts - COSN</title>
+    <title>Moderate Posts</title>
     <style>
-        /* General body styling */
         body {
             font-family: Tahoma, sans-serif;
             background-color: #fac3da;
@@ -119,8 +129,8 @@ session_start();
 
 <!-- Admin Container -->
 <div class="admin-container">
-    <h1>Manage Posts</h1>
-    <p>Below is the list of posts. You can approve, edit, or delete posts as necessary.</p>
+    <h1>Moderate Posts</h1>
+    <p>Below is the list of posts that need moderation. You can approve or reject posts.</p>
 
     <!-- Posts Table -->
     <table>
@@ -128,27 +138,26 @@ session_start();
             <th>Post ID</th>
             <th>Author</th>
             <th>Content</th>
-            <th>Status</th>
             <th>Actions</th>
         </tr>
         <?php
-        // Example data; replace with database query results
-        $posts = [
-            ['id' => 1, 'author' => 'John Doe', 'content' => 'This is a sample post content.', 'status' => 'Pending'],
-            ['id' => 2, 'author' => 'Jane Smith', 'content' => 'Another example of a post.', 'status' => 'Approved'],
-            ['id' => 3, 'author' => 'Alice Brown', 'content' => 'This is yet another post content.', 'status' => 'Pending']
-        ];
+        // Fetch and display pending posts
+        while ($row = $result->fetch_assoc()) {
+            // Get author details
+            $member_query = "SELECT FirstName, LastName FROM Member WHERE MemberID = ?";
+            $member_stmt = $conn->prepare($member_query);
+            $member_stmt->bind_param("i", $row['MemberID']);
+            $member_stmt->execute();
+            $member_result = $member_stmt->get_result();
+            $member = $member_result->fetch_assoc();
 
-        foreach ($posts as $post) {
             echo "<tr>";
-            echo "<td>" . $post['id'] . "</td>";
-            echo "<td>" . $post['author'] . "</td>";
-            echo "<td>" . substr($post['content'], 0, 50) . "...</td>";
-            echo "<td>" . $post['status'] . "</td>";
+            echo "<td>" . $row['PostID'] . "</td>";
+            echo "<td>" . $member['FirstName'] . " " . $member['LastName'] . "</td>";
+            echo "<td>" . substr($row['TextContent'], 0, 50) . "...</td>";
             echo "<td>
-                    <a href='approve_post.php?id=" . $post['id'] . "'>Approve</a> | 
-                    <a href='edit_post.php?id=" . $post['id'] . "'>Edit</a> | 
-                    <a href='delete_post.php?id=" . $post['id'] . "'>Delete</a>
+                    <a href='approve_post.php?id=" . $row['PostID'] . "'>Approve</a> | 
+                    <a href='delete_post.php?id=" . $row['PostID'] . "'>Reject</a>
                   </td>";
             echo "</tr>";
         }
@@ -166,5 +175,5 @@ session_start();
 
 <?php
 // Close the database connection
-// CloseCon($conn);
+
 ?>

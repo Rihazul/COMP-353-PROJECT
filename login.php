@@ -6,10 +6,11 @@ $servername = "upc353.encs.concordia.ca";
 $username = "upc353_2";
 $password = "SleighParableSystem73";
 $dbname = "upc353_2";
-
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
+
+
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
@@ -23,8 +24,6 @@ if (isset($_SESSION['user_id'])) {
     }
     exit();
 }
-
-$login_message = "";
 
 // Handle login form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -43,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $user = $result->fetch_assoc();
 
             // Verify password (plaintext comparison, consider hashing for better security)
-            if ($password === $user['Password']) { 
+            if ($password === $user['Password']) {
                 // Set session variables
                 $_SESSION['user_id'] = $user['MemberID'];
                 $_SESSION['user_name'] = $user['Pseudonym'];
