@@ -1,3 +1,10 @@
+<?php
+        session_start();
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: login.php");
+            exit();
+        }
+        ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,6 +129,16 @@
             background: #7a29b8;
         }
     </style>
+    <script>
+        function logout() {
+        localStorage.clear();
+        fetch('logout.php', { method: 'POST' })
+            .then(() => {
+                window.location.href = 'login.php';
+            })
+            .catch(error => console.error('Error logging out:', error));
+    }
+    </script>
 </head>
 <body>
     <!-- top purple bar -->    
