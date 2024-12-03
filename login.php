@@ -50,7 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION['user_privilege'] = $user['Privilege'];
 
                 // Output JavaScript to store user ID in local storage and redirect
-                $redirect_url = $user['Privilege'] === 'admin' ? "admin.php" : "profile.php";
+                $redirect_url = $user['Privilege'] === 'Administrator' ? "admin.php" : "profile.php";
                 echo "
                 <script>
                     localStorage.setItem('user_id', " . json_encode($user['MemberID']) . ");
