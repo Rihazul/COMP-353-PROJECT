@@ -34,11 +34,12 @@ if ($conn->connect_error) {
 $posts = [];
 $message = "";
 
-// Fetch all posts ordered by DatePosted descending
+// Fetch all approved posts ordered by DatePosted descending
 $fetch_posts_query = "
     SELECT P.PostID, P.MemberID, M.FirstName, M.LastName, P.TextContent, P.AttachmentContent, P.DatePosted, P.ModerationStatus 
     FROM Posts P
     INNER JOIN Member M ON P.MemberID = M.MemberID
+    WHERE P.ModerationStatus = 'Approved'
     ORDER BY P.DatePosted DESC
 ";
 
