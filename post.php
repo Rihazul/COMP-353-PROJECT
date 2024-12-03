@@ -1,6 +1,11 @@
 <?php
 session_start();
 
+// Enable error reporting for debugging (disable in production)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
     // Redirect to login page or show an error
@@ -8,22 +13,32 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$member_id = $_SESSION['user_id'];
+// Get member_id from session and ensure it's an integer
+$member_id = (int)$_SESSION['user_id'];
 
-// Database connection
+// Debugging: Display the member ID (remove in production)
+echo "User ID: $member_id<br>";
+
+// Database credentials
 $servername = "upc353.encs.concordia.ca";
 $username = "upc353_2";
 $password = "SleighParableSystem73";
 $dbname = "upc353_2";
 
+// Connect to the database using mysqli with error handling
 $conn = new mysqli($servername, $username, $password, $dbname);
 
+// Check database connection
 if ($conn->connect_error) {
     die("<div class='message error'>Connection failed: " . htmlspecialchars($conn->connect_error) . "</div>");
 }
 
+// Initialize message variable
+$message = "";
+
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Retrieve and sanitize text content
     $text_content = $_POST['text_content'];
     $attachment = null;
 
@@ -43,21 +58,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (move_uploaded_file($_FILES["attachment"]["tmp_name"], $target_file)) {
                 $attachment = $target_file; // Save the file path to the database
             } else {
-                echo "<div class='message error'>File upload failed.</div>";
+                $message = "<div class='message error'>File upload failed.</div>";
             }
         } else {
-            echo "<div class='message error'>Invalid file type.</div>";
+            $message = "<div class='message error'>Invalid file type.</div>";
         }
     }
 
     // Insert post into the database
     $query = "INSERT INTO Posts (MemberID, TextContent, AttachmentContent, DatePosted, ModerationStatus) VALUES (?, ?, ?, NOW(), 'Pending')";
-    $stmt = $conn->prepare($query);
-    if ($stmt) {
+    if ($stmt = $conn->prepare($query)) {
         $stmt->bind_param("iss", $member_id, $text_content, $attachment);
 
         if ($stmt->execute()) {
-            echo "<div class='message success'>Post created successfully! Redirecting to your profile...</div>";
+            $message = "<div class='message success'>Post created successfully! Redirecting to your profile...</div>";
             // Redirect to profile.php after 3 seconds
             echo "<script>
                 setTimeout(function() {
@@ -65,11 +79,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }, 3000);
             </script>";
         } else {
-            echo "<div class='message error'>Error creating post: " . htmlspecialchars($conn->error) . "</div>";
+            $message = "<div class='message error'>Error creating post: " . htmlspecialchars($stmt->error) . "</div>";
         }
         $stmt->close();
     } else {
-        echo "<div class='message error'>Database error: " . htmlspecialchars($conn->error) . "</div>";
+        $message = "<div class='message error'>Database error: " . htmlspecialchars($conn->error) . "</div>";
     }
 }
 ?>
@@ -180,6 +194,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <h1>Create Post</h1>
     </header>
     <div class="container">
+        <?php if (!empty($message)) echo $message; ?>
+
         <div class="form-container">
             <h2>Write a New Post</h2>
             <form action="" method="post" enctype="multipart/form-data">
@@ -194,15 +210,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <h2>Your Posts</h2>
             <?php
             // Fetch posts for the current user
-            $query = "SELECT TextContent, AttachmentContent, DatePosted, ModerationStatus FROM Posts WHERE MemberID = ? ORDER BY DatePosted DESC";
-            $stmt = $conn->prepare($query);
-            if ($stmt) {
+            $query = "SELECT MemberID, TextContent, AttachmentContent, DatePosted, ModerationStatus 
+                      FROM Posts 
+                      WHERE MemberID = ? 
+                      ORDER BY DatePosted DESC";
+
+            if ($stmt = $conn->prepare($query)) {
+                // Bind the member_id parameter to ensure only current user's posts are fetched
                 $stmt->bind_param("i", $member_id);
                 $stmt->execute();
                 $result = $stmt->get_result();
 
                 if ($result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
+                        // Debug: Display the MemberID of each fetched post
+                        echo "<p>Fetched Post MemberID: " . htmlspecialchars($row['MemberID']) . "</p>";
+
                         echo "<div class='post'>";
                         echo "<h3>Post on " . htmlspecialchars(date("F j, Y, g:i a", strtotime($row['DatePosted']))) . "</h3>";
                         echo "<p>" . nl2br(htmlspecialchars($row['TextContent'])) . "</p>";
@@ -217,7 +240,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             if (in_array($file_ext, $image_extensions)) {
                                 echo "<img src='" . htmlspecialchars($row['AttachmentContent']) . "' alt='Attachment' style='max-width: 100%; height: auto;'>";
                             } elseif (in_array($file_ext, $video_extensions)) {
-                                echo "<video controls style='max-width: 100%; height: auto;'><source src='" . htmlspecialchars($row['AttachmentContent']) . "' type='video/mp4'>Your browser does not support the video tag.</video>";
+                                echo "<video controls style='max-width: 100%; height: auto;'>
+                                        <source src='" . htmlspecialchars($row['AttachmentContent']) . "' type='video/mp4'>
+                                        Your browser does not support the video tag.
+                                      </video>";
                             } elseif (in_array($file_ext, $document_extensions)) {
                                 echo "<a href='" . htmlspecialchars($row['AttachmentContent']) . "' target='_blank'>View Attachment</a>";
                             } else {
@@ -237,6 +263,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 echo "<div class='message error'>Error fetching posts: " . htmlspecialchars($conn->error) . "</div>";
             }
 
+            // Close the database connection
             $conn->close();
             ?>
         </div>
