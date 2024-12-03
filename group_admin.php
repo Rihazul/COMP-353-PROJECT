@@ -102,82 +102,110 @@
     </style>
 </head>
 <body>
-    <!-- Top Bar -->
-    <div id="purple_bar">
-        <div style="font-size: 45px; font-weight: bold;">
-            COSN
-        </div>
-        <button class="logout-button" onclick="window.location.href='login.php'">Log out</button>
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Database connection
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Fetch user data
+$user_sql = "SELECT MemberID, FirstName, LastName FROM Member WHERE Status = 'Inactive'";
+$user_result = $conn->query($user_sql);
+
+// Fetch post data
+$post_sql = "SELECT PostID, TextContent FROM Posts WHERE ModerationStatus = 'Pending'";
+$post_result = $conn->query($post_sql);
+?>
+
+<!-- Top Bar -->
+<div id="purple_bar">
+    <div style="font-size: 45px; font-weight: bold;">
+        COSN
+    </div>
+    <button class="logout-button" onclick="window.location.href='login.php'">Log out</button>
+</div>
+
+<!-- Admin Container -->
+<div class="admin-container">
+    <!-- User Approval Section -->
+    <div class="admin-section">
+        <h2>Approve or Disapprove Users</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                if ($user_result->num_rows > 0) {
+                    // Output data of each row
+                    while($row = $user_result->fetch_assoc()) {
+                        echo "<tr>";
+                        echo "<td>" . $row["MemberID"] . "</td>";
+                        echo "<td>" . $row["FirstName"] . " " . $row["LastName"] . "</td>";
+                        echo "<td>";
+                        echo "<button class='approve-button' onclick='approveUser(" . $row["MemberID"] . ")'>Approve</button>";
+                        echo "<button class='disapprove-button' onclick='disapproveUser(" . $row["MemberID"] . ")'>Disapprove</button>";
+                        echo "</td>";
+                        echo "</tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='3'>No users to approve</td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
     </div>
 
-    <!-- Admin Container -->
-    <div class="admin-container">
-        <!-- User Approval Section -->
-        <div class="admin-section">
-            <h2>Approve or Disapprove Users</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>User ID</th>
-                        <th>Name</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Example Row -->
-                    <tr>
-                        <td>101</td>
-                        <td>John Doe</td>
-                        <td>
-                            <button class="approve-button" onclick="approveUser(101)">Approve</button>
-                            <button class="disapprove-button" onclick="disapproveUser(101)">Disapprove</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>102</td>
-                        <td>Jane Smith</td>
-                        <td>
-                            <button class="approve-button" onclick="approveUser(102)">Approve</button>
-                            <button class="disapprove-button" onclick="disapproveUser(102)">Disapprove</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Post Management Section -->
-        <div class="admin-section">
-            <h2>Manage Group Posts</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Post ID</th>
-                        <th>Content</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Example Row -->
-                    <tr>
-                        <td>201</td>
-                        <td>This is a post from the group.</td>
-                        <td>
-                            <button class="edit-button" onclick="editPost(201)">Edit</button>
-                            <button class="delete-button" onclick="deletePost(201)">Delete</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>202</td>
-                        <td>Another group post content.</td>
-                        <td>
-                            <button class="edit-button" onclick="editPost(202)">Edit</button>
-                            <button class="delete-button" onclick="deletePost(202)">Delete</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+    <!-- Post Management Section -->
+    <div class="admin-section">
+        <h2>Manage Group Posts</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Post ID</th>
+                    <th>Content</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                if ($post_result->num_rows > 0) {
+                    // Output data of each row
+                    while($row = $post_result->fetch_assoc()) {
+                        echo "<tr>";
+                        echo "<td>" . $row["PostID"] . "</td>";
+                        echo "<td>" . $row["TextContent"] . "</td>";
+                        echo "<td>";
+                        echo "<button class='edit-button' onclick='editPost(" . $row["PostID"] . ")'>Edit</button>";
+                        echo "<button class='delete-button' onclick='deletePost(" . $row["PostID"] . ")'>Delete</button>";
+                        echo "</td>";
+                        echo "</tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='3'>No posts available</td></tr>";
+                }
+                $conn->close();
+                ?>
+            </tbody>
+        </table>
     </div>
+</div>
 
     <script>
         function approveUser(userId) {
