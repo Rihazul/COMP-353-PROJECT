@@ -4,27 +4,14 @@ $servername = "upc353.encs.concordia.ca";
 $username = "upc353_2";
 $password = "SleighParableSystem73";
 $dbname = "upc353_2";
+
+// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    die("<p class='error'>Connection failed: " . htmlspecialchars($conn->connect_error) . "</p>");
 }
-
-// Tables to fetch
-$tables = [
-    "Member" => ["MemberID", "Password", "FirstName", "LastName", "Address", "Email", "DOB", "Pseudonym", "Privilege", "Status", "PublicInfoVisibilitySettings", "SecretSanta"],
-    "`Groups`" => ["GroupID", "GroupName", "Description", "CreationDate"],
-    "GroupMembers" => ["GroupID", "MemberID", "Role", "DateJoined"],
-    "Messages" => ["MessageID", "SenderMemberID", "RecipientMemberID", "Content", "DateSent"],
-    "Posts" => ["PostID", "MemberID", "GroupID", "TextContent", "AttachmentContent", "DatePosted", "ModerationStatus"],
-    "Comments" => ["CommentID", "PostID", "MemberID", "Content", "DatePosted"],
-    "Friends" => ["MemberID1", "MemberID2", "DateStarted", "Status"],
-    "Notifications" => ["ContentID", "MessageID", "Date", "MemberID", "NotificationContent"],
-    "`Event`" => ["Event", "MemberID"],
-    "suggestions" => ["SuggestionID", "MemberID", "Event", "Suggestion", "Date", "Time", "Votes"],
-    "Gift_exchange" => ["GroupID", "MemberID1", "MemberID2", "Post"],
-];
 
 // Handle SQL Command Execution
 $sql_output = "";
@@ -71,7 +58,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['sql_command'])) {
         $sql_output .= "<p class='error'>Please enter an SQL command.</p>";
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,38 +105,78 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['sql_command'])) {
 
     <!-- Display Tables and Their Data -->
     <?php
-    foreach ($tables as $table_name => $columns) {
-        $display_name = str_replace("`", "", $table_name); // Remove backticks for display
-        echo "<h2>Table: $display_name</h2>";
+    // Fetch all tables from the database
+    $tables_query = "SHOW TABLES";
+    $tables_result = $conn->query($tables_query);
 
-        // Fetch data from the current table
-        $query = "SELECT " . implode(", ", $columns) . " FROM $table_name";
-        $result = $conn->query($query);
+    if ($tables_result) {
+        while ($table_row = $tables_result->fetch_array()) {
+            $table_name = $table_row[0];
+            $display_name = htmlspecialchars($table_name); // Sanitize for display
 
-        if ($result && $result->num_rows > 0) {
-            echo "<table>";
-            // Display table headers
-            echo "<tr>";
-            foreach ($columns as $column) {
-                echo "<th>" . htmlspecialchars($column) . "</th>";
-            }
-            echo "</tr>";
+            echo "<h2>Table: $display_name</h2>";
 
-            // Display table rows
-            while ($row = $result->fetch_assoc()) {
-                echo "<tr>";
-                foreach ($columns as $column) {
-                    echo "<td>" . htmlspecialchars($row[$column] ?? "") . "</td>";
+            // Fetch columns for the current table
+            $columns_query = "SHOW COLUMNS FROM `$table_name`";
+            $columns_result = $conn->query($columns_query);
+
+            if ($columns_result) {
+                $columns = [];
+                while ($column = $columns_result->fetch_assoc()) {
+                    $columns[] = $column['Field'];
                 }
-                echo "</tr>";
+
+                if (count($columns) > 0) {
+                    // Fetch data from the current table
+                    // To handle tables with special characters or reserved words, use backticks
+                    $select_query = "SELECT * FROM `$table_name`";
+                    $data_result = $conn->query($select_query);
+
+                    if ($data_result && $data_result->num_rows > 0) {
+                        echo "<table>";
+                        // Display table headers
+                        echo "<tr>";
+                        foreach ($columns as $column) {
+                            echo "<th>" . htmlspecialchars($column) . "</th>";
+                        }
+                        echo "</tr>";
+
+                        // Display table rows
+                        while ($row = $data_result->fetch_assoc()) {
+                            echo "<tr>";
+                            foreach ($columns as $column) {
+                                // Handle NULL values
+                                $cell = isset($row[$column]) ? $row[$column] : "NULL";
+                                echo "<td>" . htmlspecialchars($cell) . "</td>";
+                            }
+                            echo "</tr>";
+                        }
+                        echo "</table>";
+
+                        // Free data result set
+                        $data_result->free();
+                    } else {
+                        // Display message if table is empty
+                        echo "<p class='empty-message'>No data found in table <strong>$display_name</strong>.</p>";
+                    }
+
+                    // Free columns result set
+                    $columns_result->free();
+                } else {
+                    echo "<p class='empty-message'>No columns found in table <strong>$display_name</strong>.</p>";
+                }
+            } else {
+                echo "<p class='error'>Error fetching columns for table <strong>$display_name</strong>: " . htmlspecialchars($conn->error) . "</p>";
             }
-            echo "</table>";
-        } else {
-            // Display message if table is empty
-            echo "<p class='empty-message'>No data found in table $display_name.</p>";
         }
+
+        // Free tables result set
+        $tables_result->free();
+    } else {
+        echo "<p class='error'>Error fetching tables: " . htmlspecialchars($conn->error) . "</p>";
     }
 
+    // Close the database connection
     $conn->close();
     ?>
 </body>
