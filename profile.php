@@ -27,13 +27,6 @@ $stmt->execute();
 $user_result = $stmt->get_result();
 $user = $user_result->fetch_assoc();
 
-// If no user found, log them out
-if (!$user) {
-    session_destroy();
-    header("Location: login.php");
-    exit();
-}
-
 // Get user's posts
 $posts_query = "SELECT * FROM Posts WHERE MemberID = ? ORDER BY DatePosted DESC";
 $post_stmt = $conn->prepare($posts_query);
