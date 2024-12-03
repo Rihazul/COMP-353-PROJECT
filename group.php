@@ -1,3 +1,32 @@
+<?php
+// Database connection
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Fetch group details
+$group_id = 1; // This should be dynamic based on the group being viewed
+$sql = "SELECT GroupName, Description FROM `Groups` WHERE GroupID = $group_id";
+$result = $conn->query($sql);
+
+if ($result->num_rows > 0) {
+    // Fetch the group data
+    $row = $result->fetch_assoc();
+    $group_name = $row['GroupName'];
+    $group_description = $row['Description'];
+} else {
+    echo "Group not found.";
+    exit;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -128,8 +157,8 @@
     <div class="group-container">
         <!-- Group Header -->
         <div class="group-header">
-            <h2>Group Name</h2>
-            <p>Group Description: This is a place for members to share ideas and collaborate.</p>
+            <h2><?php echo htmlspecialchars($group_name); ?></h2>
+            <p>Group Description: <?php echo htmlspecialchars($group_description); ?></p>
         </div>
 
         <!-- Post Creation Form -->
@@ -137,7 +166,7 @@
             <form action="create_post.php" method="post" enctype="multipart/form-data">
                 <textarea name="post_content" rows="4" placeholder="What's on your mind?"></textarea>
                 <input type="file" name="media" accept="image/*,video/*">
-                <input type="hidden" name="group_id" value="1"> <!-- Dynamic Group ID -->
+                <input type="hidden" name="group_id" value="<?php echo $group_id; ?>"> <!-- Dynamic Group ID -->
                 <button type="submit">Post</button>
             </form>
         </div>
@@ -165,3 +194,8 @@
     </div>
 </body>
 </html>
+
+<?php
+// Close the database connection
+$conn->close();
+?>
