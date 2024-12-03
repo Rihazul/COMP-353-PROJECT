@@ -6,8 +6,8 @@
     <title>Notifications</title>
     <style>
         body {
-            font-family: Tahoma, sans-serif;
-            background-color: #fac3da;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
             margin: 0;
             padding: 0;
         }
@@ -62,31 +62,37 @@
         <div class="notifications">
             <h3>Recent Notifications</h3>
             <?php
-            // Example demo notifications
-            $notifications = [
-                [
-                    "type" => "Friend Request",
-                    "message" => "John Doe sent you a friend request.",
-                    "time" => "2 hours ago"
-                ],
-                [
-                    "type" => "Message",
-                    "message" => "Alice sent you a message.",
-                    "time" => "5 hours ago"
-                ],
-                [
-                    "type" => "Event Reminder",
-                    "message" => "Don't forget the group meeting tomorrow at 10 AM.",
-                    "time" => "1 day ago"
-                ]
-            ];
+            // Database connection
+            $servername = "upc353.encs.concordia.ca";
+            $username = "upc353_2";
+            $password = "SleighParableSystem73";
+            $dbname = "upc353_2";
+
+            $conn = new mysqli($servername, $username, $password, $dbname);
+
+            // Check connection
+            if ($conn->connect_error) {
+                die("Connection failed: " . $conn->connect_error);
+            }
+
+            // Fetch notifications from the da  tabase
+            $sql = "SELECT NotificationContent, Date FROM Notifications";
+            $result = $conn->query($sql);
+
+            $notifications = [];
+            if ($result->num_rows > 0) {
+                while($row = $result->fetch_assoc()) {
+                    $notifications[] = $row;
+                }
+            }
+
+            $conn->close();
 
             if (!empty($notifications)) {
                 foreach ($notifications as $notification) {
                     echo "<div class='notification'>";
-                    echo "<strong>" . htmlspecialchars($notification['type']) . "</strong>";
-                    echo "<p>" . htmlspecialchars($notification['message']) . "</p>";
-                    echo "<p><em>" . htmlspecialchars($notification['time']) . "</em></p>";
+                    echo "<p>" . htmlspecialchars($notification['NotificationContent']) . "</p>";
+                    echo "<p><em>" . htmlspecialchars($notification['Date']) . "</em></p>";
                     echo "</div>";
                 }
             } else {
