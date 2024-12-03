@@ -2,8 +2,25 @@
 session_start();
 
 // Database connection
-// include 'db_connection.php';
-// $conn = OpenCon();
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Fetch members from the database
+$members_query = "SELECT MemberID, FirstName, LastName, Email FROM Member"; // Adjust the table and column names if necessary
+$members_result = mysqli_query($conn, $members_query);
+
+if (!$members_result) {
+    die("Error fetching members: " . mysqli_error($conn));
+}
 
 ?>
 <!DOCTYPE html>
@@ -131,19 +148,17 @@ session_start();
             <th>Actions</th>
         </tr>
         <?php
-        // Example data; replace with database query results
-        $members = [
-            ['id' => 1, 'name' => 'John Doe', 'email' => 'johndoe@example.com'],
-            ['id' => 2, 'name' => 'Jane Smith', 'email' => 'janesmith@example.com'],
-            ['id' => 3, 'name' => 'Alice Brown', 'email' => 'alicebrown@example.com']
-        ];
-
-        foreach ($members as $member) {
+        // Display each member from the database
+        while ($member = mysqli_fetch_assoc($members_result)) {
             echo "<tr>";
-            echo "<td>" . $member['id'] . "</td>";
-            echo "<td>" . $member['name'] . "</td>";
-            echo "<td>" . $member['email'] . "</td>";
-            echo "<td><a href='edit_member.php?id=" . $member['id'] . "'>Edit</a> | <a href='delete_member.php?id=" . $member['id'] . "'>Delete</a></td>";
+            echo "<td>" . $member['MemberID'] . "</td>";
+            echo "<td>" . $member['FirstName'] . "</td>";
+            echo "<td>" . $member['LastName'] . "</td>";
+            echo "<td>" . $member['Email'] . "</td>";
+            echo "<td>
+                    <a href='edit_member.php?id=" . $member['MemberID'] . "'>Edit</a> | 
+                    <a href='delete_member.php?id=" . $member['MemberID'] . "'>Delete</a>
+                  </td>";
             echo "</tr>";
         }
         ?>
@@ -160,5 +175,5 @@ session_start();
 
 <?php
 // Close the database connection
-// CloseCon($conn);
+$conn->close();
 ?>
