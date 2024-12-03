@@ -42,13 +42,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows > 0) {
             $signup_message = "This email is already registered.";
         } else {
-            // Hash the password
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
             // Insert new user into the database
             $insert_query = "INSERT INTO Member (FirstName, LastName, Gender, DOB, Email, Password) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($insert_query);
-            $stmt->bind_param("ssssss", $first_name, $last_name, $gender, $date_of_birth, $email, $hashed_password);
+            if (!$stmt) {
+                die("Database error: " . $conn->error);
+            }
+            $stmt->bind_param("ssssss", $first_name, $last_name, $gender, $date_of_birth, $email, $password);
 
             if ($stmt->execute()) {
                 $_SESSION['user_id'] = $stmt->insert_id;
