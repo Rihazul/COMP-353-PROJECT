@@ -244,7 +244,6 @@ $pending_posts = mysqli_fetch_assoc($pending_posts_result)['pending_posts'];
         <ul>
             <li><a href="create_member.php">Create New Member</a></li>
             <li><a href="create_group.php">Create New Group</a></li>
-            <li><a href="moderate_posts.php">Moderate Pending Posts</a></li>
             <li><a href="reports.php">Generate Member Reports</a></li>
         </ul>
     </div>
