@@ -12,17 +12,22 @@ if ($conn->connect_error) {
 }
 
 // Fetch group details
-$group_id = 1; // This should be dynamic based on the group being viewed
-$sql = "SELECT GroupName, Description FROM `Groups` WHERE GroupID = $group_id";
-$result = $conn->query($sql);
+$group_id = isset($_GET['group_id']) ? intval($_GET['group_id']) : 0;
+if ($group_id > 0) {
+    $sql = "SELECT GroupName, Description FROM `Groups` WHERE GroupID = $group_id";
+    $result = $conn->query($sql);
 
-if ($result->num_rows > 0) {
-    // Fetch the group data
-    $row = $result->fetch_assoc();
-    $group_name = $row['GroupName'];
-    $group_description = $row['Description'];
+    if ($result->num_rows > 0) {
+        // Fetch the group data
+        $row = $result->fetch_assoc();
+        $group_name = $row['GroupName'];
+        $group_description = $row['Description'];
+    } else {
+        echo "Group not found.";
+        exit;
+    }
 } else {
-    echo "Group not found.";
+    echo "Invalid group ID.";
     exit;
 }
 ?>

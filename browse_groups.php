@@ -1,9 +1,27 @@
+<?php
+// Database connection
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Fetch all groups
+$sql = "SELECT GroupID, GroupName, Description FROM `Groups`";
+$result = $conn->query($sql);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Groups</title>
+    <title>Browse Groups</title>
     <style>
         body {
             font-family: Tahoma, sans-serif;
@@ -32,7 +50,7 @@
         .logout-button:hover {
             background-color: #e0d4f7;
         }
-        .groups-container {
+        .group-container {
             width: 900px;
             margin: 30px auto;
             padding: 20px;
@@ -40,46 +58,30 @@
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
-        h2 {
-            color: #9e34eb;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .group-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
+        .group-item {
             padding: 15px;
-            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
             border-radius: 10px;
             box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
         }
-        .group-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
+        .group-item h3 {
+            margin: 0;
+            color: #9e34eb;
         }
-        .group-image {
-            width: 60px;
-            height: 60px;
-            border-radius: 10px;
-            object-fit: cover;
+        .group-item p {
+            margin: 5px 0;
+            color: #555;
         }
-        .group-details {
-            font-size: 16px;
-        }
-        .join-button {
-            background-color: #9e34eb;
+        .group-item a {
+            text-decoration: none;
             color: white;
-            border: none;
-            padding: 10px 20px;
+            background-color: #9e34eb;
+            padding: 5px 10px;
             border-radius: 5px;
-            cursor: pointer;
             font-weight: bold;
-            transition: background-color 0.3s;
         }
-        .join-button:hover {
+        .group-item a:hover {
             background-color: #7a29b8;
         }
     </style>
@@ -93,49 +95,25 @@
         <button class="logout-button" onclick="window.location.href='login.php'">Log out</button>
     </div>
 
-    <!-- Groups Container -->
-    <div class="groups-container">
-        <h2>Available Groups</h2>
-        <!-- Group 1 -->
-        <div class="group-card">
-            <div class="group-info">
-                <img src="https://via.placeholder.com/60" class="group-image" alt="Group Image">
-                <div class="group-details">
-                    <strong>Group Name 1</strong>
-                    <p>Description of the group. Something about its purpose.</p>
+    <!-- Group List Container -->
+    <div class="group-container">
+        <h2>Browse Groups</h2>
+        <?php if ($result->num_rows > 0): ?>
+            <?php while ($row = $result->fetch_assoc()): ?>
+                <div class="group-item">
+                    <h3><?php echo htmlspecialchars($row['GroupName']); ?></h3>
+                    <p><?php echo htmlspecialchars($row['Description']); ?></p>
+                    <a href="group.php?group_id=<?php echo $row['GroupID']; ?>">View Group</a>
                 </div>
-            </div>
-            <button class="join-button" onclick="joinGroup(1)">Join</button>
-        </div>
-        <!-- Group 2 -->
-        <div class="group-card">
-            <div class="group-info">
-                <img src="https://via.placeholder.com/60" class="group-image" alt="Group Image">
-                <div class="group-details">
-                    <strong>Group Name 2</strong>
-                    <p>Description of the group. Something about its purpose.</p>
-                </div>
-            </div>
-            <button class="join-button" onclick="joinGroup(2)">Join</button>
-        </div>
-        <!-- Group 3 -->
-        <div class="group-card">
-            <div class="group-info">
-                <img src="https://via.placeholder.com/60" class="group-image" alt="Group Image">
-                <div class="group-details">
-                    <strong>Group Name 3</strong>
-                    <p>Description of the group. Something about its purpose.</p>
-                </div>
-            </div>
-            <button class="join-button" onclick="joinGroup(3)">Join</button>
-        </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <p>No groups found.</p>
+        <?php endif; ?>
     </div>
-
-    <script>
-        function joinGroup(groupId) {
-            // Implement AJAX call to join the group
-            alert('Request to join group ' + groupId + ' sent.');
-        }
-    </script>
 </body>
 </html>
+
+<?php
+// Close the database connection
+$conn->close();
+?>
