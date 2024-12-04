@@ -23,6 +23,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
     $retyped_password = trim($_POST['retyped_password']);
+    $privilege = trim($_POST['privilege']);
+
+    // Set privilege to "junior" if the user selects "regular"
+    if ($privilege == 'regular') {
+        $privilege = 'junior';
+    }
 
     // Validate form inputs
     if (empty($first_name) || empty($last_name) || empty($email) || empty($password) || empty($retyped_password)) {
@@ -44,16 +50,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
 
             // Insert new user into the database
-            $insert_query = "INSERT INTO Member (FirstName, LastName, Gender, DOB, Email, Password) VALUES (?, ?, ?, ?, ?, ?)";
+            $insert_query = "INSERT INTO Member (FirstName, LastName, Gender, DOB, Email, Password, Privilege) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($insert_query);
             if (!$stmt) {
                 die("Database error: " . $conn->error);
             }
-            $stmt->bind_param("ssssss", $first_name, $last_name, $gender, $date_of_birth, $email, $password);
+            $stmt->bind_param("sssssss", $first_name, $last_name, $gender, $date_of_birth, $email, $password,$privilege);
 
             if ($stmt->execute()) {
                 $_SESSION['user_id'] = $stmt->insert_id;
                 $_SESSION['user_name'] = $first_name;
+
+                // Make the new user a friend with the admin (MemberID1)
+                $admin_id = 1;
+                $friend_query = "INSERT INTO Friends (MemberID1, MemberID2) VALUES (?, ?)";
+                $stmt = $conn->prepare($friend_query);
+                if (!$stmt) {
+                    die("Database error: " . $conn->error);
+                }
+                $stmt->bind_param("ii", $admin_id, $new_user_id);
+                $stmt->execute();
 
                 // Redirect to profile page after successful signup
                 header("Location: profile.php");
@@ -145,6 +161,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <input type="text" id="typed_email" placeholder="Enter your email" name="email" required> <br><br>
             <input type="password" id="typed_email" placeholder="Enter your password" name="password" required> <br><br>
             <input type="password" id="typed_email" placeholder="Retype your password" name="retyped_password" required> <br><br>
+            <label for="privilege">User Type:</label>
+            <select name="privilege" id="privilege">
+                <option value="regular">Regular</option>
+                <option value="businessman">Businessman</option>
+            </select> <br><br>
             <input type="submit" id="submit_button" value="Sign Up"> <br><br>
         </form>
 
