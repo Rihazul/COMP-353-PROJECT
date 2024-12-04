@@ -380,15 +380,18 @@ $fetch_posts_query = "
                 FROM Friends F
                 WHERE F.MemberID2 = ? AND F.Status = 'Accepted'
             )
+            OR P.MemberID = ? -- Include posts created by the logged-in user
         )
     ORDER BY 
         P.DatePosted DESC;
 ";
 
+
 // Prepare the SQL query
 if ($stmt = $conn->prepare($fetch_posts_query)) {
     // Bind exactly three parameters for the placeholders
-    $stmt->bind_param("iii", $user_id, $user_id, $user_id); 
+$stmt->bind_param("iiii", $user_id, $user_id, $user_id, $user_id);
+
     
     // Execute the query
     if ($stmt->execute()) {
