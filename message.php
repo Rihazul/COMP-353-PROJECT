@@ -1,11 +1,12 @@
-
-
 <?php
+ob_start();
 session_start();
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', 'php_errors.log'); // Specify the log file location
 error_reporting(E_ALL); // Report all PHP errors
+
+
 
 // Mock user session for demonstration
  // Replace with dynamic session data
