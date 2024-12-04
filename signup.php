@@ -58,18 +58,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->bind_param("sssssss", $first_name, $last_name, $gender, $date_of_birth, $email, $password,$privilege);
 
             if ($stmt->execute()) {
+                $new_user_id = $stmt->insert_id; // Assign the new user's ID to $new_user_id
                 $_SESSION['user_id'] = $stmt->insert_id;
                 $_SESSION['user_name'] = $first_name;
 
                 // Make the new user a friend with the admin (MemberID1)
                 $admin_id = 1;
                 $friend_query = "INSERT INTO Friends (MemberID1, MemberID2) VALUES (?, ?)";
-                $stmt = $conn->prepare($friend_query);
+                $friend_stmt = $conn->prepare($friend_query);
                 if (!$stmt) {
                     die("Database error: " . $conn->error);
                 }
-                $stmt->bind_param("ii", $admin_id, $new_user_id);
-                $stmt->execute();
+                $friend_stmt->bind_param("ii", $admin_id, $new_user_id);
+                $friend_stmt->execute();
 
                 // Redirect to profile page after successful signup
                 header("Location: profile.php");
