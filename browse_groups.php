@@ -28,6 +28,37 @@ $joined_stmt = $conn->prepare($joined_groups_sql);
 $joined_stmt->bind_param("i", $user_id);
 $joined_stmt->execute();
 $joined_groups_result = $joined_stmt->get_result();
+
+// Handle join requests
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
+    $group_id = intval($_POST['group_id']);
+
+    // Check if the user has already requested to join
+    $check_request_sql = "
+        SELECT * FROM JoinRequests
+        WHERE GroupID = ? AND MemberID = ? AND Status = 'Pending'";
+    $check_stmt = $conn->prepare($check_request_sql);
+    $check_stmt->bind_param("ii", $group_id, $user_id);
+    $check_stmt->execute();
+    $check_result = $check_stmt->get_result();
+
+    if ($check_result->num_rows == 0) {
+        // Insert join request
+        $insert_request_sql = "
+            INSERT INTO JoinRequests (GroupID, MemberID)
+            VALUES (?, ?)";
+        $insert_stmt = $conn->prepare($insert_request_sql);
+        $insert_stmt->bind_param("ii", $group_id, $user_id);
+
+        if ($insert_stmt->execute()) {
+            echo "<script>alert('Request sent successfully!');</script>";
+        } else {
+            echo "<script>alert('Failed to send request. Please try again.');</script>";
+        }
+    } else {
+        echo "<script>alert('You have already requested to join this group.');</script>";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -87,6 +118,21 @@ $joined_groups_result = $joined_stmt->get_result();
             margin: 5px 0;
             color: #555;
         }
+        .group-item form {
+            display: inline-block;
+        }
+        .group-item button {
+            background-color: #34eb9e;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .group-item button:hover {
+            background-color: #29b87a;
+        }
         .group-item a {
             text-decoration: none;
             color: white;
@@ -104,6 +150,23 @@ $joined_groups_result = $joined_stmt->get_result();
         }
         .group-item .request-join:hover {
             background-color: #29b87a;
+        }
+        .create-group-container {
+            text-align: center;
+            margin: 20px;
+        }
+        .create-group-container button {
+            background-color: #9e34eb;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+        .create-group-container button:hover {
+            background-color: #7a29b8;
         }
     </style>
 </head>
@@ -124,8 +187,11 @@ $joined_groups_result = $joined_stmt->get_result();
                 <div class="group-item">
                     <h3><?php echo htmlspecialchars($row['GroupName']); ?></h3>
                     <p><?php echo htmlspecialchars($row['Description']); ?></p>
+                    <form method="POST" action="">
+                        <input type="hidden" name="group_id" value="<?php echo $row['GroupID']; ?>">
+                        <button type="submit">Request to Join</button>
+                    </form>
                     <a href="group.php?group_id=<?php echo $row['GroupID']; ?>">View Group</a>
-                    <a href="request_join.php?group_id=<?php echo $row['GroupID']; ?>" class="request-join">Request Join</a>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
@@ -147,6 +213,12 @@ $joined_groups_result = $joined_stmt->get_result();
         <?php else: ?>
             <p>You have not joined any groups yet.</p>
         <?php endif; ?>
+    </div>
+
+    <!-- Create and Manage Group Buttons -->
+    <div class="create-group-container">
+        <button onclick="window.location.href='create_group.php'">Create a Group</button>
+        <button onclick="window.location.href='group_admin.php'">Manage Your Group</button>
     </div>
 </body>
 </html>

@@ -64,7 +64,7 @@
             background-color: #9e34eb;
             color: white;
         }
-        .approve-button, .disapprove-button, .edit-button, .delete-button {
+        .approve-button, .reject-button, .edit-button, .delete-button {
             padding: 5px 10px;
             border-radius: 5px;
             border: none;
@@ -78,11 +78,11 @@
         .approve-button:hover {
             background-color: #218838;
         }
-        .disapprove-button {
+        .reject-button {
             background-color: #dc3545;
             color: white;
         }
-        .disapprove-button:hover {
+        .reject-button:hover {
             background-color: #c82333;
         }
         .edit-button {
@@ -120,11 +120,19 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch user data
-$user_sql = "SELECT MemberID, FirstName, LastName FROM Member WHERE Status = 'Inactive'";
-$user_result = $conn->query($user_sql);
+// Fetch pending join requests
+$group_id = 1; // Replace with the group ID for the admin
+$join_requests_sql = "
+    SELECT JR.RequestID, JR.MemberID, M.FirstName, M.LastName, JR.RequestedAt
+    FROM JoinRequests JR
+    INNER JOIN Member M ON JR.MemberID = M.MemberID
+    WHERE JR.GroupID = ? AND JR.Status = 'Pending'";
+$join_requests_stmt = $conn->prepare($join_requests_sql);
+$join_requests_stmt->bind_param("i", $group_id);
+$join_requests_stmt->execute();
+$join_requests_result = $join_requests_stmt->get_result();
 
-// Fetch post data
+// Fetch posts for moderation
 $post_sql = "SELECT PostID, TextContent FROM Posts WHERE ModerationStatus = 'Pending'";
 $post_result = $conn->query($post_sql);
 ?>
@@ -139,33 +147,39 @@ $post_result = $conn->query($post_sql);
 
 <!-- Admin Container -->
 <div class="admin-container">
-    <!-- User Approval Section -->
+    <!-- Pending Join Requests Section -->
     <div class="admin-section">
-        <h2>Approve or Disapprove Users</h2>
+        <h2>Manage Join Requests</h2>
         <table>
             <thead>
                 <tr>
+                    <th>Request ID</th>
                     <th>User ID</th>
                     <th>Name</th>
+                    <th>Requested At</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 <?php
-                if ($user_result->num_rows > 0) {
-                    // Output data of each row
-                    while($row = $user_result->fetch_assoc()) {
+                if ($join_requests_result->num_rows > 0) {
+                    while ($row = $join_requests_result->fetch_assoc()) {
                         echo "<tr>";
+                        echo "<td>" . $row["RequestID"] . "</td>";
                         echo "<td>" . $row["MemberID"] . "</td>";
                         echo "<td>" . $row["FirstName"] . " " . $row["LastName"] . "</td>";
+                        echo "<td>" . $row["RequestedAt"] . "</td>";
                         echo "<td>";
-                        echo "<button class='approve-button' onclick='approveUser(" . $row["MemberID"] . ")'>Approve</button>";
-                        echo "<button class='disapprove-button' onclick='disapproveUser(" . $row["MemberID"] . ")'>Disapprove</button>";
+                        echo "<form method='post' style='display: inline;'>
+                                <input type='hidden' name='request_id' value='" . $row["RequestID"] . "'>
+                                <button type='submit' name='action' value='approve' class='approve-button'>Approve</button>
+                                <button type='submit' name='action' value='reject' class='reject-button'>Reject</button>
+                              </form>";
                         echo "</td>";
                         echo "</tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='3'>No users to approve</td></tr>";
+                    echo "<tr><td colspan='5'>No pending join requests</td></tr>";
                 }
                 ?>
             </tbody>
@@ -186,8 +200,7 @@ $post_result = $conn->query($post_sql);
             <tbody>
                 <?php
                 if ($post_result->num_rows > 0) {
-                    // Output data of each row
-                    while($row = $post_result->fetch_assoc()) {
+                    while ($row = $post_result->fetch_assoc()) {
                         echo "<tr>";
                         echo "<td>" . $row["PostID"] . "</td>";
                         echo "<td>" . $row["TextContent"] . "</td>";
@@ -200,36 +213,50 @@ $post_result = $conn->query($post_sql);
                 } else {
                     echo "<tr><td colspan='3'>No posts available</td></tr>";
                 }
-                $conn->close();
                 ?>
             </tbody>
         </table>
     </div>
 </div>
 
-    <script>
-        function approveUser(userId) {
-            // Implement AJAX call to approve the user
-            alert('User ' + userId + ' approved.');
-        }
+<?php
+// Handle approval or rejection of join requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'], $_POST['action'])) {
+    $request_id = intval($_POST['request_id']);
+    $action = $_POST['action'];
 
-        function disapproveUser(userId) {
-            // Implement AJAX call to disapprove the user
-            alert('User ' + userId + ' disapproved.');
-        }
+    if ($action === 'approve') {
+        $update_sql = "UPDATE JoinRequests SET Status = 'Approved' WHERE RequestID = ?";
+    } elseif ($action === 'reject') {
+        $update_sql = "UPDATE JoinRequests SET Status = 'Rejected' WHERE RequestID = ?";
+    }
 
-        function editPost(postId) {
-            // Redirect to the edit post page or implement inline editing
-            alert('Redirecting to edit post ' + postId);
-            // Example: window.location.href = `edit_post.php?post_id=${postId}`;
+    if (!empty($update_sql)) {
+        $update_stmt = $conn->prepare($update_sql);
+        $update_stmt->bind_param("i", $request_id);
+        if ($update_stmt->execute()) {
+            echo "<script>alert('Request has been processed successfully.'); window.location.reload();</script>";
+        } else {
+            echo "<script>alert('Failed to process the request.');</script>";
         }
+    }
+}
 
-        function deletePost(postId) {
-            // Implement AJAX call to delete the post
-            if (confirm('Are you sure you want to delete post ' + postId + '?')) {
-                alert('Post ' + postId + ' deleted.');
-            }
+$conn->close();
+?>
+
+<script>
+    function editPost(postId) {
+        alert('Redirecting to edit post ' + postId);
+        // Redirect or handle editing logic
+    }
+
+    function deletePost(postId) {
+        if (confirm('Are you sure you want to delete post ' + postId + '?')) {
+            alert('Post ' + postId + ' deleted.');
+            // Add AJAX or server-side logic to delete the post
         }
-    </script>
+    }
+</script>
 </body>
 </html>
