@@ -6,9 +6,9 @@ $servername = "upc353.encs.concordia.ca";
 $username = "upc353_2";
 $password = "SleighParableSystem73";
 $dbname = "upc353_2";
+
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
@@ -42,6 +42,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bind_param("ssssssssi", $first_name, $last_name, $email, $dob, $pseudonym, $privilege, $status, $secret_santa, $user_id);
 
     if ($stmt->execute()) {
+        // Reset strikes if the status is updated to "Active"
+        if ($status == 'Active') {
+            $reset_strikes_query = "UPDATE UserStrikes SET StrikeCount = 0 WHERE MemberID = ?";
+            $reset_strikes_stmt = $conn->prepare($reset_strikes_query);
+            $reset_strikes_stmt->bind_param("i", $user_id);
+            $reset_strikes_stmt->execute();
+        }
+
         $message = "User successfully updated!";
     } else {
         $message = "Error: " . $stmt->error;
