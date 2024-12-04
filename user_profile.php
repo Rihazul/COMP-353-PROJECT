@@ -19,12 +19,28 @@ if ($conn->connect_error) {
 }
 
 // Fetch friend's MemberID from the friend table
-$main_user_id = $_SESSION['user_id'];
-$friend_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Get the main user ID from session (assuming the user is logged in)
+$main_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 
-$friend_query = "SELECT m.FirstName, m.LastName FROM Friends f JOIN Member m ON f.MemberID2 = m.MemberID WHERE f.MemberID1 = ? AND f.MemberID2 = ? AND f.Status = 'Accepted'";
+// Get the friend ID from the URL query parameter 'id'
+$friend_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+// Query to fetch the friend's first and last name
+$friend_query = "
+                    SELECT m.FirstName, m.LastName
+                    FROM Friends f
+                    JOIN Member m 
+                    ON m.MemberID = CASE 
+                                    WHEN f.MemberID1 = ? THEN f.MemberID2 
+                                    WHEN f.MemberID2 = ? THEN f.MemberID1 
+                                    END
+                    WHERE ((f.MemberID1 = ? AND f.MemberID2 = ?)
+                    OR (f.MemberID1 = ? AND f.MemberID2 = ?))
+                    AND f.Status = 'Accepted'
+                    LIMIT 1;
+                ";
 $stmt = $conn->prepare($friend_query);
-$stmt->bind_param("ii", $main_user_id, $friend_id);
+$stmt->bind_param("iiiiii", $main_user_id, $main_user_id, $main_user_id, $friend_id, $friend_id, $main_user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $friend = $result->fetch_assoc();
