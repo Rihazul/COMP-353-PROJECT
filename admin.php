@@ -225,7 +225,6 @@ $pending_posts = mysqli_fetch_assoc($pending_posts_result)['pending_posts'];
             <a href="manage_members.php">Manage Members</a>
             <a href="manage_groups.php">Manage Groups</a>
             <a href="moderate_posts.php">Moderate Posts</a>
-            <a href="reports.php">View Reports</a>
         </div>
 
         <!-- Quick Stats -->
@@ -245,7 +244,7 @@ $pending_posts = mysqli_fetch_assoc($pending_posts_result)['pending_posts'];
                 <li><a href="create_member.php">Create New Member</a></li>
                 <li><a href="create_group.php">Create New Group</a></li>
                 <li><a href="moderate_posts.php">Moderate Pending Posts</a></li>
-                <li><a href="reports.php">Generate Member Reports</a></li>
+                <li><a href="reports.php">Generate Group Report</a></li>
             </ul>
         </div>
     </div>
