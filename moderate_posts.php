@@ -9,7 +9,9 @@ $dbname = "upc353_2";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
 // Query to get pending posts
 $sql = "SELECT * FROM Posts WHERE ModerationStatus = 'Pending'";
@@ -18,6 +20,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -130,18 +133,20 @@ $result = $stmt->get_result();
 <!-- Admin Container -->
 <div class="admin-container">
     <h1>Moderate Posts</h1>
-    <p>Below is the list of posts that need moderation. You can approve or reject posts.</p>
+    <p>Below is the list of posts that need moderation. You can approve or reject posts. Strike count and suspension status are shown next to the author.</p>
 
     <!-- Posts Table -->
     <table>
         <tr>
             <th>Post ID</th>
             <th>Author</th>
+            <th>Strike Count</th>
+            <th>Suspension Status</th>
             <th>Content</th>
             <th>Actions</th>
         </tr>
         <?php
-        // Fetch and display pending posts
+        // Fetch and display pending posts with strike count and suspension status
         while ($row = $result->fetch_assoc()) {
             // Get author details
             $member_query = "SELECT FirstName, LastName FROM Member WHERE MemberID = ?";
@@ -151,9 +156,22 @@ $result = $stmt->get_result();
             $member_result = $member_stmt->get_result();
             $member = $member_result->fetch_assoc();
 
+            // Get strike count and suspension status
+            $strike_query = "SELECT StrikeCount, IsSuspended FROM UserStrikes WHERE MemberID = ?";
+            $strike_stmt = $conn->prepare($strike_query);
+            $strike_stmt->bind_param("i", $row['MemberID']);
+            $strike_stmt->execute();
+            $strike_result = $strike_stmt->get_result();
+            $strike_data = $strike_result->fetch_assoc();
+
+            $strike_count = $strike_data['StrikeCount'] ?? 0;
+            $is_suspended = isset($strike_data['IsSuspended']) && $strike_data['IsSuspended'] ? 'Suspended' : 'Active';
+
             echo "<tr>";
             echo "<td>" . $row['PostID'] . "</td>";
             echo "<td>" . $member['FirstName'] . " " . $member['LastName'] . "</td>";
+            echo "<td>" . $strike_count . "</td>";
+            echo "<td>" . $is_suspended . "</td>";
             echo "<td>" . substr($row['TextContent'], 0, 50) . "...</td>";
             echo "<td>
                     <a href='approve_post.php?id=" . $row['PostID'] . "'>Approve</a> | 
@@ -175,5 +193,5 @@ $result = $stmt->get_result();
 
 <?php
 // Close the database connection
-
+$conn->close();
 ?>
