@@ -19,41 +19,59 @@
         }
 
 
-        // Fetch current user settings from the database
-        $user_id = $_SESSION['user_id'];
-        $query = "SELECT Email, FirstName, LastName FROM Member WHERE MemberID = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $user = $result->fetch_assoc();
+// Fetch current user settings from the database
+$user_id = $_SESSION['user_id'];
+$query = "SELECT Email, FirstName, LastName, Family, Friends, Colleagues FROM Member WHERE MemberID = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+
         
         // Handle form submission to update user settings
         $update_message = "";
-        if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_settings'])) {
-            $email = trim($_POST['email']);
-            $first_name = trim($_POST['first_name']);
-            $last_name = trim($_POST['last_name']);
-            $password = trim($_POST['password']);
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_settings'])) {
+    $email = trim($_POST['email']);
+    $first_name = trim($_POST['first_name']);
+    $last_name = trim($_POST['last_name']);
+    $password = trim($_POST['password']);
+    $family = trim($_POST['family']); // New field
+    $friends = trim($_POST['friends']); // New field
+    $colleagues = trim($_POST['colleagues']); // New field
 
-        // Validate form inputs
-        if (empty($email) || empty($first_name) || empty($last_name) || empty($password)) {
-            $update_message = "All fields are required.";
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $update_message = "Invalid email format.";
+    // Validate form inputs
+    if (empty($email) || empty($first_name) || empty($last_name) || empty($password)) {
+        $update_message = "All fields are required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $update_message = "Invalid email format.";
+    } else {
+        // Update user settings in the database, including new fields
+        $update_query = "UPDATE Member 
+                         SET Email = ?, FirstName = ?, LastName = ?, Password = ?, 
+                             Family = ?, Friends = ?, Colleagues = ?
+                         WHERE MemberID = ?";
+        $stmt = $conn->prepare($update_query);
+        $stmt->bind_param("sssssssi", 
+            $email, 
+            $first_name, 
+            $last_name, 
+            $password, 
+            $family, 
+            $friends, 
+            $colleagues, 
+            $user_id
+        );
+
+        if ($stmt->execute()) {
+            $update_message = "Settings updated successfully.";
         } else {
-            // Update user settings in the database
-            $update_query = "UPDATE Member SET Email = ?, FirstName = ?, LastName = ?, Password = ? WHERE MemberID = ?";
-            $stmt = $conn->prepare($update_query);
-            $stmt->bind_param("ssssi", $email, $first_name, $last_name, $password, $user_id);
-
-            if ($stmt->execute()) {
-                $update_message = "Settings updated successfully.";
-            } else {
-                $update_message = "Error updating settings. Please try again.";
-            }
+            $update_message = "Error updating settings. Please try again.";
         }
     }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -228,21 +246,39 @@
         <main>
             <section>
                 <h2>Account Settings</h2>
-                <form action="settings.php" method="post">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user['Email']); ?>" required>
-                    
-                    <label for="first_name">First Name:</label>
-                    <input type="text" id="first_name" name="first_name" value="<?php echo htmlspecialchars($user['FirstName']); ?>" required>
+<form action="settings.php" method="post">
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user['Email']); ?>" required>
+    
+    <label for="first_name">First Name:</label>
+    <input type="text" id="first_name" name="first_name" value="<?php echo htmlspecialchars($user['FirstName']); ?>" required>
 
-                    <label for="last_name">Last Name:</label>
-                    <input type="text" id="last_name" name="last_name" value="<?php echo htmlspecialchars($user['LastName']); ?>" required>
-                    
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required>
-                    
-                    <input type="submit" name="update_settings" value="Update Settings">
-                </form>
+    <label for="last_name">Last Name:</label>
+    <input type="text" id="last_name" name="last_name" value="<?php echo htmlspecialchars($user['LastName']); ?>" required>
+    
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required>
+
+    <!-- New fields -->
+    <label for="family">Family:</label>
+    <input type="text" id="family" name="family" 
+           value="<?php echo htmlspecialchars($user['Family'] ?? ''); ?>" 
+           placeholder="Enter family members">
+
+    <label for="friends">Friends:</label>
+    <input type="text" id="friends" name="friends" 
+           value="<?php echo htmlspecialchars($user['Friends'] ?? ''); ?>" 
+           placeholder="Enter friends">
+
+    <label for="colleagues">Colleagues:</label>
+    <input type="text" id="colleagues" name="colleagues" 
+           value="<?php echo htmlspecialchars($user['Colleagues'] ?? ''); ?>" 
+           placeholder="Enter colleagues">
+
+    <input type="submit" name="update_settings" value="Update Settings">
+</form>
+
+
                 <?php if (!empty($update_message)): ?>
                     <div class="message"><?php echo htmlspecialchars($update_message); ?></div>
                 <?php endif; ?>
