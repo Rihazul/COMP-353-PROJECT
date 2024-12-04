@@ -107,7 +107,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['new_friend'])) {
         $message = "<div class='message error'>Friend name cannot be empty.</div>";
     }
 }
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_friend_id'])) {
+    $delete_friend_id = (int)$_POST['delete_friend_id'];
 
+    // Check if the friendship exists
+    $check_friendship_query = "
+        SELECT * 
+        FROM Friends 
+        WHERE (MemberID1 = ? AND MemberID2 = ?)
+           OR (MemberID1 = ? AND MemberID2 = ?)";
+    if ($stmt = $conn->prepare($check_friendship_query)) {
+        $stmt->bind_param("iiii", $user_id, $delete_friend_id, $delete_friend_id, $user_id);
+        $stmt->execute();
+        $stmt->store_result();
+
+        if ($stmt->num_rows > 0) {
+            $stmt->close();
+
+            // Delete the friendship
+            $delete_friend_query = "
+                DELETE FROM Friends 
+                WHERE (MemberID1 = ? AND MemberID2 = ?)
+                   OR (MemberID1 = ? AND MemberID2 = ?)";
+            if ($stmt = $conn->prepare($delete_friend_query)) {
+                $stmt->bind_param("iiii", $user_id, $delete_friend_id, $delete_friend_id, $user_id);
+                if ($stmt->execute()) {
+                    $message = "<div class='message success'>Friendship successfully deleted!</div>";
+                } else {
+                    $message = "<div class='message error'>Error deleting friendship: " . htmlspecialchars($stmt->error) . "</div>";
+                }
+                $stmt->close();
+            } else {
+                $message = "<div class='message error'>Error preparing delete statement.</div>";
+            }
+        } else {
+            $message = "<div class='message error'>No friendship found to delete.</div>";
+            $stmt->close();
+        }
+    } else {
+        $message = "<div class='message error'>Error preparing friendship check statement.</div>";
+    }
+}
 // Fetch friends list
 $friends_list = [];
 $friends_query = "
@@ -299,21 +339,27 @@ $conn->close();
         
         <!-- Friends List Section -->
         <h2>Friends List</h2>
-        <div class="friends-list" id="friends-list">
-            <?php if (empty($friends_list)): ?>
-                <p>No friends found.</p>
-            <?php else: ?>
-                <?php foreach ($friends_list as $friend): ?>
-                    <div class="friend-card">
-                        <!-- Use a default image for all friends -->
-                        <img src="default.jpg" alt="<?php echo htmlspecialchars($friend['FullName'], ENT_QUOTES, 'UTF-8'); ?>">
-                        <a href="user_profile.php?id=<?php echo htmlspecialchars($friend['MemberID'], ENT_QUOTES, 'UTF-8'); ?>">
-                            <?php echo htmlspecialchars($friend['FullName'], ENT_QUOTES, 'UTF-8'); ?>
-                        </a>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
+<div class="friends-list" id="friends-list">
+    <?php if (empty($friends_list)): ?>
+        <p>No friends found.</p>
+    <?php else: ?>
+        <?php foreach ($friends_list as $friend): ?>
+            <div class="friend-card">
+                <img src="default.jpg" alt="<?php echo htmlspecialchars($friend['FullName'], ENT_QUOTES, 'UTF-8'); ?>">
+                <a href="user_profile.php?id=<?php echo htmlspecialchars($friend['MemberID'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo htmlspecialchars($friend['FullName'], ENT_QUOTES, 'UTF-8'); ?>
+                </a>
+                <form action="friends.php" method="POST" style="display: inline;">
+                    <input type="hidden" name="delete_friend_id" value="<?php echo htmlspecialchars($friend['MemberID'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <button type="submit" style="background-color: #ff4d4d; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer;">
+                        Delete
+                    </button>
+                </form>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
         
         <!-- Add Friend Form -->
         <form action="friends.php" method="POST" id="add-friend-form">
