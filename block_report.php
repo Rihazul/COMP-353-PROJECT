@@ -1,3 +1,62 @@
+<?php
+session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Database connection
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+$message = ""; // Feedback message
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $currentUserID = $_SESSION['user_id'];
+    $targetUserID = intval($_POST['target_user']);
+    $actionType = $_POST['action_type'];
+    $reason = isset($_POST['reason']) ? trim($_POST['reason']) : null;
+
+    if ($actionType === "block") {
+        // Block the user
+        $stmt = $conn->prepare("INSERT IGNORE INTO Block (BlockerMemberID, BlockedMemberID) VALUES (?, ?)");
+        $stmt->bind_param("ii", $currentUserID, $targetUserID);
+
+        if ($stmt->execute()) {
+            $message = "User successfully blocked.";
+        } else {
+            $message = "Error: Could not block user.";
+        }
+        $stmt->close();
+    } elseif ($actionType === "report") {
+        // Report the user
+        $stmt = $conn->prepare("INSERT INTO Report (ReporterMemberID, ReportedEntityID, EntityType, ReportType, Description) VALUES (?, ?, 'Member', 'User Issue', ?)");
+        $stmt->bind_param("iis", $currentUserID, $targetUserID, $reason);
+
+        if ($stmt->execute()) {
+            $message = "Report submitted successfully.";
+        } else {
+            $message = "Error: Could not submit report.";
+        }
+        $stmt->close();
+    } else {
+        $message = "Invalid action type.";
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,6 +155,14 @@
         .back-button:hover {
             background-color: #e0d4f7;
         }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            color: #333;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -113,7 +180,10 @@
     <!-- Block/Report Content -->
     <div class="block-report-content">
         <h2>Block or Report User</h2>
-        <form action="block_report_handler.php" method="post">
+        <?php if (!empty($message)): ?>
+            <div class="message"><?php echo htmlspecialchars($message); ?></div>
+        <?php endif; ?>
+        <form action="" method="post">
             <label for="target_user">User ID:</label>
             <input type="number" id="target_user" name="target_user" placeholder="Enter User ID" required>
             
