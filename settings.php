@@ -72,6 +72,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_settings'])) {
     }
 }
 
+// Handle form submission to delete user account
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_account'])) {
+    // Delete related rows in the Notifications table
+    $delete_notifications_query = "DELETE FROM Notifications WHERE MessageID IN (SELECT MessageID FROM Messages WHERE SenderMemberID = ? OR RecipientMemberID = ?)";
+    $stmt = $conn->prepare($delete_notifications_query);
+    $stmt->bind_param("ii", $user_id, $user_id);
+    $stmt->execute();
+
+      // Delete related rows in the Messages table
+      $delete_messages_query = "DELETE FROM Messages WHERE SenderMemberID = ? OR RecipientMemberID = ?";
+      $stmt = $conn->prepare($delete_messages_query);
+      $stmt->bind_param("ii", $user_id, $user_id);
+      $stmt->execute();
+
+     // Delete related rows in the Friends table
+     $delete_friends_query = "DELETE FROM Friends WHERE MemberID1 = ? OR MemberID2 = ?";
+     $stmt = $conn->prepare($delete_friends_query);
+     $stmt->bind_param("ii", $user_id, $user_id);
+     $stmt->execute();
+ 
+    // Delete user account from the database
+    $delete_query = "DELETE FROM Member WHERE MemberID = ?";
+    $stmt = $conn->prepare($delete_query);
+    $stmt->bind_param("i", $user_id);
+
+    if ($stmt->execute()) {
+        // Destroy the session and redirect to the login page
+        session_destroy();
+        header("Location: login.php");
+        exit();
+    } else {
+        $update_message = "Error deleting account. Please try again.";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -206,6 +240,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_settings'])) {
             border-radius: 5px;
             color: #333;
         }
+        .delete-button {
+            background-color: #ff4d4d;
+        }
+        .delete-button:hover {
+            background-color: #ff1a1a;
+        }
     </style>
     <script>
         function logout() {
@@ -277,7 +317,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_settings'])) {
 
     <input type="submit" name="update_settings" value="Update Settings">
 </form>
-
+<form action="settings.php" method="post">
+                    <input type="submit" name="delete_account" value="Delete Account" class="delete-button">
+                </form>
 
                 <?php if (!empty($update_message)): ?>
                     <div class="message"><?php echo htmlspecialchars($update_message); ?></div>
