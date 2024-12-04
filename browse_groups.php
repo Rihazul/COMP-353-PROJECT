@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
     <!-- Create and Manage Group Buttons -->
     <div class="create-group-container">
         <button onclick="window.location.href='create_group.php'">Create a Group</button>
-        <button onclick="window.location.href='group_admin.php'">Manage Your Group</button>
+        <button onclick="window.location.href='owned_groups.php'">Manage your owned groups</button>
     </div>
 </body>
 </html>
