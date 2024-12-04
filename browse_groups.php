@@ -29,6 +29,37 @@ $joined_stmt->bind_param("i", $user_id);
 $joined_stmt->execute();
 $joined_groups_result = $joined_stmt->get_result();
 
+// Handle join request action
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
+    $group_id = intval($_POST['group_id']);
+
+    // Check if a pending request already exists
+    $check_request_sql = "
+        SELECT * FROM JoinRequests 
+        WHERE GroupID = ? AND MemberID = ? AND Status = 'Pending'";
+    $check_stmt = $conn->prepare($check_request_sql);
+    $check_stmt->bind_param("ii", $group_id, $user_id);
+    $check_stmt->execute();
+    $check_result = $check_stmt->get_result();
+
+    if ($check_result->num_rows == 0) {
+        // Insert a new join request
+        $insert_request_sql = "
+            INSERT INTO JoinRequests (GroupID, MemberID, Status) 
+            VALUES (?, ?, 'Pending')";
+        $insert_stmt = $conn->prepare($insert_request_sql);
+        $insert_stmt->bind_param("ii", $group_id, $user_id);
+
+        if ($insert_stmt->execute()) {
+            echo "<script>alert('Request to join the group has been sent successfully.');</script>";
+        } else {
+            echo "<script>alert('Failed to send the join request. Please try again.');</script>";
+        }
+    } else {
+        echo "<script>alert('You have already requested to join this group.');</script>";
+    }
+}
+
 // Handle leave group action
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
     $leave_group_id = intval($_POST['leave_group_id']);
@@ -45,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
