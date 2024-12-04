@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 // Database connection
 $servername = "upc353.encs.concordia.ca";
 $username = "upc353_2";
@@ -14,6 +16,18 @@ if ($conn->connect_error) {
 // Fetch all groups
 $sql = "SELECT GroupID, GroupName, Description FROM `Groups`";
 $result = $conn->query($sql);
+
+// Fetch groups the user has joined
+$user_id = $_SESSION['user_id'];
+$joined_groups_sql = "
+    SELECT G.GroupID, G.GroupName, G.Description 
+    FROM `Groups` G
+    INNER JOIN `GroupMembers` GM ON G.GroupID = GM.GroupID
+    WHERE GM.MemberID = ?";
+$joined_stmt = $conn->prepare($joined_groups_sql);
+$joined_stmt->bind_param("i", $user_id);
+$joined_stmt->execute();
+$joined_groups_result = $joined_stmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -84,6 +98,13 @@ $result = $conn->query($sql);
         .group-item a:hover {
             background-color: #7a29b8;
         }
+        .group-item .request-join {
+            background-color: #34eb9e;
+            margin-left: 10px;
+        }
+        .group-item .request-join:hover {
+            background-color: #29b87a;
+        }
     </style>
 </head>
 <body>
@@ -97,9 +118,26 @@ $result = $conn->query($sql);
 
     <!-- Group List Container -->
     <div class="group-container">
-        <h2>Browse Groups</h2>
+        <h2>All Groups</h2>
         <?php if ($result->num_rows > 0): ?>
             <?php while ($row = $result->fetch_assoc()): ?>
+                <div class="group-item">
+                    <h3><?php echo htmlspecialchars($row['GroupName']); ?></h3>
+                    <p><?php echo htmlspecialchars($row['Description']); ?></p>
+                    <a href="group.php?group_id=<?php echo $row['GroupID']; ?>">View Group</a>
+                    <a href="request_join.php?group_id=<?php echo $row['GroupID']; ?>" class="request-join">Request Join</a>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <p>No groups found.</p>
+        <?php endif; ?>
+    </div>
+
+    <!-- Joined Groups Container -->
+    <div class="group-container">
+        <h2>Your Groups</h2>
+        <?php if ($joined_groups_result->num_rows > 0): ?>
+            <?php while ($row = $joined_groups_result->fetch_assoc()): ?>
                 <div class="group-item">
                     <h3><?php echo htmlspecialchars($row['GroupName']); ?></h3>
                     <p><?php echo htmlspecialchars($row['Description']); ?></p>
@@ -107,13 +145,8 @@ $result = $conn->query($sql);
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
-            <p>No groups found.</p>
+            <p>You have not joined any groups yet.</p>
         <?php endif; ?>
     </div>
 </body>
 </html>
-
-<?php
-// Close the database connection
-$conn->close();
-?>
