@@ -13,6 +13,37 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    // Redirect to login page
+    header("Location: login.php");
+    exit();
+}
+
+// Get user role from the `Members` table (update table and column name as needed)
+$user_id = $_SESSION['user_id'];
+$user_role_query = "SELECT Privilege FROM Member WHERE MemberID = ?"; // Adjust table and column names
+$stmt = $conn->prepare($user_role_query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    $user_role = $row['Privilege'];
+} else {
+    // Redirect if user does not exist
+    header("Location: login.php");
+    exit();
+}
+
+// Allow access only for Admin or Senior
+if ($user_role !== 'Admin' && $user_role !== 'Senior') {
+    // Redirect unauthorized users
+    header("Location: forbidden.php");
+    exit();
+}
+
 // Handle form submission for creating a new group
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $group_name = trim($_POST['group_name']);
