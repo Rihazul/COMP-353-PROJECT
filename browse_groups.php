@@ -29,34 +29,19 @@ $joined_stmt->bind_param("i", $user_id);
 $joined_stmt->execute();
 $joined_groups_result = $joined_stmt->get_result();
 
-// Handle join requests
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
-    $group_id = intval($_POST['group_id']);
+// Handle leave group action
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
+    $leave_group_id = intval($_POST['leave_group_id']);
 
-    // Check if the user has already requested to join
-    $check_request_sql = "
-        SELECT * FROM JoinRequests
-        WHERE GroupID = ? AND MemberID = ? AND Status = 'Pending'";
-    $check_stmt = $conn->prepare($check_request_sql);
-    $check_stmt->bind_param("ii", $group_id, $user_id);
-    $check_stmt->execute();
-    $check_result = $check_stmt->get_result();
+    // Remove user from the group
+    $leave_group_sql = "DELETE FROM GroupMembers WHERE GroupID = ? AND MemberID = ?";
+    $leave_stmt = $conn->prepare($leave_group_sql);
+    $leave_stmt->bind_param("ii", $leave_group_id, $user_id);
 
-    if ($check_result->num_rows == 0) {
-        // Insert join request
-        $insert_request_sql = "
-            INSERT INTO JoinRequests (GroupID, MemberID)
-            VALUES (?, ?)";
-        $insert_stmt = $conn->prepare($insert_request_sql);
-        $insert_stmt->bind_param("ii", $group_id, $user_id);
-
-        if ($insert_stmt->execute()) {
-            echo "<script>alert('Request sent successfully!');</script>";
-        } else {
-            echo "<script>alert('Failed to send request. Please try again.');</script>";
-        }
+    if ($leave_stmt->execute()) {
+        echo "<script>alert('You have left the group successfully.');</script>";
     } else {
-        echo "<script>alert('You have already requested to join this group.');</script>";
+        echo "<script>alert('Failed to leave the group. Please try again.');</script>";
     }
 }
 ?>
@@ -130,6 +115,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
             cursor: pointer;
             font-weight: bold;
         }
+        .group-item button.leave-btn {
+            background-color: #eb3434;
+        }
+        .group-item button.leave-btn:hover {
+            background-color: #b82c2c;
+        }
         .group-item button:hover {
             background-color: #29b87a;
         }
@@ -143,13 +134,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
         }
         .group-item a:hover {
             background-color: #7a29b8;
-        }
-        .group-item .request-join {
-            background-color: #34eb9e;
-            margin-left: 10px;
-        }
-        .group-item .request-join:hover {
-            background-color: #29b87a;
         }
         .create-group-container {
             text-align: center;
@@ -191,7 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
                         <input type="hidden" name="group_id" value="<?php echo $row['GroupID']; ?>">
                         <button type="submit">Request to Join</button>
                     </form>
-                    <a href="group.php?group_id=<?php echo $row['GroupID']; ?>">View Group</a>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
@@ -208,6 +191,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
                     <h3><?php echo htmlspecialchars($row['GroupName']); ?></h3>
                     <p><?php echo htmlspecialchars($row['Description']); ?></p>
                     <a href="group.php?group_id=<?php echo $row['GroupID']; ?>">View Group</a>
+                    <form method="POST" action="" style="display:inline;">
+                        <input type="hidden" name="leave_group_id" value="<?php echo $row['GroupID']; ?>">
+                        <button type="submit" class="leave-btn">Leave</button>
+                    </form>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>

@@ -340,31 +340,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch all approved posts ordered by DatePosted descending
+// Fetch all approved posts ordered by DatePosted descending
 $fetch_posts_query = "
-    SELECT P.PostID, P.MemberID, M.FirstName, M.LastName, P.TextContent, P.AttachmentContent, P.AdditionalContent, P.AdditionalAttachment, P.LinkURL, P.DatePosted, P.ModerationStatus, P.Profile 
-    FROM Posts P
-    INNER JOIN Member M ON P.MemberID = M.MemberID
-    WHERE P.ModerationStatus = 'Approved'
-    ORDER BY P.DatePosted DESC
+    SELECT 
+        P.PostID, 
+        P.MemberID, 
+        M.FirstName, 
+        M.LastName, 
+        P.GroupID, 
+        `Groups`.GroupName, 
+        P.TextContent, 
+        P.AttachmentContent, 
+        P.LinkURL, 
+        P.AdditionalContent, 
+        P.AdditionalAttachment, 
+        P.DatePosted, 
+        P.ModerationStatus, 
+        P.Profile
+    FROM 
+        Posts P
+    LEFT JOIN 
+        Member M ON P.MemberID = M.MemberID
+    LEFT JOIN 
+        `Groups` ON P.GroupID = `Groups`.GroupID
+    WHERE 
+        P.ModerationStatus = 'Approved'
+        AND (
+            P.GroupID IN (
+                SELECT GM.GroupID
+                FROM GroupMembers GM
+                WHERE GM.MemberID = ?
+            )
+            OR P.MemberID IN (
+                SELECT F.MemberID2
+                FROM Friends F
+                WHERE F.MemberID1 = ? AND F.Status = 'Accepted'
+                UNION
+                SELECT F.MemberID1
+                FROM Friends F
+                WHERE F.MemberID2 = ? AND F.Status = 'Accepted'
+            )
+            OR P.MemberID = ? -- Include posts created by the logged-in user
+        )
+    ORDER BY 
+        P.DatePosted DESC;
 ";
 
-if ($result = $conn->query($fetch_posts_query)) {
-    while ($row = $result->fetch_assoc()) {
-        // Fetch comments for this post
-        $row['Comments'] = fetch_comments($conn, $row['PostID']);
-        // Fetch attachments for this post (if multiple attachments are needed)
-        // Uncomment the following line if using a separate Attachments table
-        // $row['Attachments'] = fetch_attachments($conn, $row['PostID']);
-        $posts[] = $row;
-    }
-    $result->free();
-} else {
-    if ($environment === 'development') {
-        $message .= "<div class='message error'>Error fetching posts: " . htmlspecialchars($conn->error) . "</div>";
+
+// Prepare the SQL query
+if ($stmt = $conn->prepare($fetch_posts_query)) {
+    // Bind exactly three parameters for the placeholders
+$stmt->bind_param("iiii", $user_id, $user_id, $user_id, $user_id);
+
+    
+    // Execute the query
+    if ($stmt->execute()) {
+        $result = $stmt->get_result();
+        $posts = [];
+        while ($row = $result->fetch_assoc()) {
+            // Fetch comments for this post
+            $row['Comments'] = fetch_comments($conn, $row['PostID']);
+            $posts[] = $row;
+        }
     } else {
-        $message .= "<div class='message error'>An error occurred while fetching posts.</div>";
+        echo "<div class='message error'>Error executing query: " . htmlspecialchars($stmt->error) . "</div>";
     }
+    $stmt->close();
+} else {
+    echo "<div class='message error'>Error preparing query: " . htmlspecialchars($conn->error) . "</div>";
 }
+
+
+
 
 // Close the database connection
 $conn->close();

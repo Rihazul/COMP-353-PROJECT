@@ -292,7 +292,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_profile'])) {
                         $post_id = htmlspecialchars($row['PostID']);
                         $date_posted = htmlspecialchars(date("F j, Y, g:i a", strtotime($row['DatePosted'])));
                         $text_content = nl2br(htmlspecialchars($row['TextContent']));
-                        $attachment = htmlspecialchars($row['AttachmentContent']);
+$attachment = $row['AttachmentContent'] ? htmlspecialchars($row['AttachmentContent']) : 'No attachment';
                         $moderation_status = htmlspecialchars($row['ModerationStatus']);
                         $current_profile = htmlspecialchars($row['Profile'] ?? 'View Only');
 
