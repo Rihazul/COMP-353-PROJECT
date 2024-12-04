@@ -11,18 +11,62 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch group details
-$group_id = 1; // This should be dynamic based on the group being viewed
-$sql = "SELECT GroupName, Description FROM `Groups` WHERE GroupID = $group_id";
-$result = $conn->query($sql);
+// Handle form submission to create a new post
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['post_content'], $_POST['group_id'])) {
+    $post_content = $conn->real_escape_string($_POST['post_content']);
+    $group_id = intval($_POST['group_id']);
+    $member_id = 1; // Replace with the actual logged-in MemberID
 
-if ($result->num_rows > 0) {
-    // Fetch the group data
-    $row = $result->fetch_assoc();
-    $group_name = $row['GroupName'];
-    $group_description = $row['Description'];
+    // Handle optional media upload
+    $attachment_content = NULL;
+    if (!empty($_FILES['media']['tmp_name'])) {
+        $attachment_content = file_get_contents($_FILES['media']['tmp_name']);
+    }
+
+    // Insert the post into the database
+    $sql = "INSERT INTO `Posts` (MemberID, GroupID, TextContent, AttachmentContent, DatePosted, ModerationStatus) 
+            VALUES ($member_id, $group_id, '$post_content', ?, NOW(), 'Pending')";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("b", $attachment_content); // 'b' indicates blob data
+
+    if ($stmt->execute()) {
+        // Redirect to avoid form resubmission issues
+        header("Location: group.php?group_id=" . $group_id);
+        exit;
+    } else {
+        echo "Error: " . $stmt->error;
+    }
+}
+
+// Fetch group details
+$group_id = isset($_GET['group_id']) ? intval($_GET['group_id']) : 0;
+if ($group_id > 0) {
+    $sql = "SELECT GroupName, Description FROM `Groups` WHERE GroupID = $group_id";
+    $result = $conn->query($sql);
+
+    if ($result->num_rows > 0) {
+        // Fetch the group data
+        $row = $result->fetch_assoc();
+        $group_name = $row['GroupName'];
+        $group_description = $row['Description'];
+    } else {
+        echo "Group not found.";
+        exit;
+    }
+
+    // Fetch posts for the group
+    $posts_sql = "SELECT PostID, MemberID, TextContent, LinkURL, DatePosted, ModerationStatus, Profile FROM `Posts` WHERE GroupID = $group_id";
+    $posts_result = $conn->query($posts_sql);
+
+    $posts = [];
+    if ($posts_result->num_rows > 0) {
+        while ($post_row = $posts_result->fetch_assoc()) {
+            $posts[] = $post_row;
+        }
+    }
 } else {
-    echo "Group not found.";
+    echo "Invalid group ID.";
     exit;
 }
 ?>
@@ -122,26 +166,6 @@ if ($result->num_rows > 0) {
             font-size: 12px;
             color: #777;
         }
-        .comment-section {
-            margin-top: 10px;
-            padding-left: 20px;
-        }
-        .comment-section form {
-            margin-top: 10px;
-        }
-        .comment-section textarea {
-            width: 90%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        .comment {
-            margin-top: 10px;
-            padding: 5px 10px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
@@ -163,7 +187,7 @@ if ($result->num_rows > 0) {
 
         <!-- Post Creation Form -->
         <div class="post-form">
-            <form action="create_post.php" method="post" enctype="multipart/form-data">
+            <form action="group.php" method="post" enctype="multipart/form-data">
                 <textarea name="post_content" rows="4" placeholder="What's on your mind?"></textarea>
                 <input type="file" name="media" accept="image/*,video/*">
                 <input type="hidden" name="group_id" value="<?php echo $group_id; ?>"> <!-- Dynamic Group ID -->
@@ -173,23 +197,21 @@ if ($result->num_rows > 0) {
 
         <!-- Posts List -->
         <div class="posts-list">
-            <!-- Example Post -->
-            <div class="post-card">
-                <div class="post-header">John Doe</div>
-                <div class="post-content">This is a post with an image.</div>
-                <img src="/uploads/sample-image.jpg" alt="Post Media" style="width: 50%; margin-top: 10px;">
-                <div class="post-time">2 hours ago</div>
-                <!-- Comments Section -->
-                <div class="comment-section">
-                    <strong>Comments:</strong>
-                    <div class="comment">Jane Smith: Nice post!</div>
-                    <form action="add_comment.php" method="post">
-                        <textarea name="comment_content" rows="2" placeholder="Add a comment..."></textarea>
-                        <input type="hidden" name="post_id" value="1">
-                        <button type="submit">Comment</button>
-                    </form>
-                </div>
-            </div>
+            <?php if (!empty($posts)): ?>
+                <?php foreach ($posts as $post): ?>
+                    <div class="post-card">
+                        <div class="post-header">Member ID: <?php echo htmlspecialchars($post['MemberID']); ?></div>
+                        <div class="post-content"><?php echo nl2br(htmlspecialchars($post['TextContent'])); ?></div>
+                        <?php if (!empty($post['LinkURL'])): ?>
+                            <a href="<?php echo htmlspecialchars($post['LinkURL']); ?>" target="_blank">View Link</a>
+                        <?php endif; ?>
+                        <div class="post-time">Posted on: <?php echo htmlspecialchars($post['DatePosted']); ?></div>
+                        <div class="post-status">Status: <?php echo htmlspecialchars($post['ModerationStatus']); ?></div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p>No posts available in this group.</p>
+            <?php endif; ?>
         </div>
     </div>
 </body>

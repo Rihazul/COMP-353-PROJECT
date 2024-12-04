@@ -699,7 +699,7 @@ $conn->close();
         <button onclick="window.location.href='profile.php'">Profile</button>
         <button onclick="window.location.href='notification.php'">Notifications</button>
         <button onclick="window.location.href='message.php'">Messages</button>
-        <button onclick="window.location.href='manage_groups.php'">Groups</button>
+        <button onclick="window.location.href='browse_groups.php'">Groups</button>
         <button onclick="window.location.href='event.php'">Events</button>
     </div>
 
