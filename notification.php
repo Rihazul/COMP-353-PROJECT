@@ -62,6 +62,8 @@
         <div class="notifications">
             <h3>Recent Notifications</h3>
             <?php
+            session_start(); // Start the session to access session variables
+
             // Database connection
             $servername = "upc353.encs.concordia.ca";
             $username = "upc353_2";
@@ -75,9 +77,15 @@
                 die("Connection failed: " . $conn->connect_error);
             }
 
-            // Fetch notifications from the da  tabase
-            $sql = "SELECT NotificationContent, Date FROM Notifications";
-            $result = $conn->query($sql);
+            // Assuming user ID is stored in session
+            $user_id = $_SESSION['user_id'];
+
+            // Fetch notifications for the specific user from the database
+            $sql = "SELECT NotificationContent, Date FROM Notifications WHERE MemberID = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $user_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
 
             $notifications = [];
             if ($result->num_rows > 0) {
@@ -86,6 +94,7 @@
                 }
             }
 
+            $stmt->close();
             $conn->close();
 
             if (!empty($notifications)) {
