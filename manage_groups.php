@@ -2,8 +2,13 @@
 session_start();
 
 // Database connection
-// include 'db_connection.php';
-// $conn = OpenCon();
+// Database connection
+$servername = "upc353.encs.concordia.ca";
+$username = "upc353_2";
+$password = "SleighParableSystem73";
+$dbname = "upc353_2";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 ?>
 <!DOCTYPE html>
@@ -120,7 +125,7 @@ session_start();
 <!-- Admin Container -->
 <div class="admin-container">
     <h1>Manage Groups</h1>
-    <p>Below is the list of all active groups. You can edit or delete groups as needed.</p>
+    <p>Below is the list of all active groups and their members. You can edit or delete groups as needed.</p>
 
     <!-- Groups Table -->
     <table>
@@ -128,25 +133,49 @@ session_start();
             <th>Group ID</th>
             <th>Group Name</th>
             <th>Description</th>
+            <th>Members</th>
             <th>Actions</th>
         </tr>
         <?php
-        // Example data; replace with database query results
-        $groups = [
-            ['id' => 1, 'name' => 'Tech Enthusiasts', 'description' => 'A group for tech lovers.'],
-            ['id' => 2, 'name' => 'Photography Club', 'description' => 'Share your photography skills.'],
-            ['id' => 3, 'name' => 'Book Readers', 'description' => 'For people who love reading books.']
-        ];
+        // Fetch group information
+        $sql_groups = "SELECT * FROM `Groups`";
+        $result_groups = $conn->query($sql_groups);
 
-        foreach ($groups as $group) {
-            echo "<tr>";
-            echo "<td>" . $group['id'] . "</td>";
-            echo "<td>" . $group['name'] . "</td>";
-            echo "<td>" . $group['description'] . "</td>";
-            echo "<td><a href='edit_group.php?id=" . $group['id'] . "'>Edit</a> | <a href='delete_group.php?id=" . $group['id'] . "'>Delete</a></td>";
-            echo "</tr>";
+        if ($result_groups->num_rows > 0) {
+            while ($group = $result_groups->fetch_assoc()) {
+                echo "<tr>";
+                echo "<td>" . $group['GroupID'] . "</td>";
+                echo "<td>" . $group['GroupName'] . "</td>";
+                echo "<td>" . $group['Description'] . "</td>";
+
+                // Fetch members for each group
+                $group_id = $group['GroupID'];
+                $sql_members = "SELECT MemberID, Role FROM `GroupMembers` WHERE GroupID = $group_id";
+                $result_members = $conn->query($sql_members);
+
+                echo "<td>";
+                if ($result_members->num_rows > 0) {
+                    echo "<ul>";
+                    while ($member = $result_members->fetch_assoc()) {
+                        echo "<li>Member ID: " . $member['MemberID'] . " (" . $member['Role'] . ")</li>";
+                    }
+                    echo "</ul>";
+                } else {
+                    echo "No members";
+                }
+                echo "</td>";
+
+                echo "<td>
+                <a href='edit_group.php?id=" . $group['GroupID'] . "'>Edit</a> |
+                <a href='delete_group.php?id=" . $group['GroupID'] . "'>Delete</a>
+              </td>";
+                echo "</tr>";
+            }
+        } else {
+            echo "<tr><td colspan='5'>No groups found</td></tr>";
         }
         ?>
+
     </table>
 </div>
 
@@ -160,5 +189,5 @@ session_start();
 
 <?php
 // Close the database connection
-// CloseCon($conn);
+CloseCon($conn);
 ?>
