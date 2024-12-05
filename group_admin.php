@@ -121,7 +121,7 @@ if ($conn->connect_error) {
 }
 
 // Fetch pending join requests
-$group_id = 1; // Replace with the group ID for the admin
+$group_id = 8; // Replace with the group ID for the admin
 $join_requests_sql = "
     SELECT JR.RequestID, JR.MemberID, M.FirstName, M.LastName, JR.RequestedAt
     FROM JoinRequests JR
