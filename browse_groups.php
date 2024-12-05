@@ -13,12 +13,18 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Get the logged-in user's ID
+if (!isset($_SESSION['user_id'])) {
+    echo "<script>alert('You are not logged in!'); window.location.href='login.php';</script>";
+    exit();
+}
+$user_id = $_SESSION['user_id'];
+
 // Fetch all groups
 $sql = "SELECT GroupID, GroupName, Description FROM `Groups`";
 $result = $conn->query($sql);
 
 // Fetch groups the user has joined
-$user_id = $_SESSION['user_id'];
 $joined_groups_sql = "
     SELECT G.GroupID, G.GroupName, G.Description 
     FROM `Groups` G
@@ -30,7 +36,7 @@ $joined_stmt->execute();
 $joined_groups_result = $joined_stmt->get_result();
 
 // Handle join request action
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['group_id'])) {
     $group_id = intval($_POST['group_id']);
 
     // Check if a pending request already exists
@@ -42,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
     $check_stmt->execute();
     $check_result = $check_stmt->get_result();
 
-    if ($check_result->num_rows == 0) {
+    if ($check_result->num_rows === 0) {
         // Insert a new join request
         $insert_request_sql = "
             INSERT INTO JoinRequests (GroupID, MemberID, Status) 
@@ -61,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['group_id'])) {
 }
 
 // Handle leave group action
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['leave_group_id'])) {
     $leave_group_id = intval($_POST['leave_group_id']);
 
     // Remove user from the group
@@ -76,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -161,6 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
             padding: 5px 10px;
             border-radius: 5px;
             font-weight: bold;
+            margin-left: 5px;
         }
         .group-item a:hover {
             background-color: #7a29b8;
@@ -185,15 +193,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
     </style>
 </head>
 <body>
-    <!-- Top Bar -->
     <div id="purple_bar">
-        <div style="font-size: 45px; font-weight: bold;">
-            COSN
-        </div>
+        <div style="font-size: 45px; font-weight: bold;">COSN</div>
         <button class="logout-button" onclick="window.location.href='login.php'">Log out</button>
     </div>
 
-    <!-- Group List Container -->
     <div class="group-container">
         <h2>All Groups</h2>
         <?php if ($result->num_rows > 0): ?>
@@ -212,7 +216,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
         <?php endif; ?>
     </div>
 
-    <!-- Joined Groups Container -->
     <div class="group-container">
         <h2>Your Groups</h2>
         <?php if ($joined_groups_result->num_rows > 0): ?>
@@ -220,11 +223,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
                 <div class="group-item">
                     <h3><?php echo htmlspecialchars($row['GroupName']); ?></h3>
                     <p><?php echo htmlspecialchars($row['Description']); ?></p>
-                    <a href="group.php?group_id=<?php echo $row['GroupID']; ?>">View Group</a>
                     <form method="POST" action="" style="display:inline;">
                         <input type="hidden" name="leave_group_id" value="<?php echo $row['GroupID']; ?>">
                         <button type="submit" class="leave-btn">Leave</button>
                     </form>
+                    <a href="group.php?group_id=<?php echo $row['GroupID']; ?>">View Group</a>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
@@ -232,9 +235,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['leave_group_id'])) {
         <?php endif; ?>
     </div>
 
-    <!-- Create and Manage Group Buttons -->
     <div class="create-group-container">
-        <button onclick="window.location.href='create_group.php'">Create a Group</button>
+        <button onclick="window.location.href='senior_create_group.php'">Create a Group</button>
         <button onclick="window.location.href='owned_groups.php'">Manage your owned groups</button>
     </div>
 </body>

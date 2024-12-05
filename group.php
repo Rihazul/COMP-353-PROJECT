@@ -200,7 +200,7 @@ if ($group_id > 0) {
             <?php if (!empty($posts)): ?>
                 <?php foreach ($posts as $post): ?>
                     <div class="post-card">
-                        <div class="post-header">Member ID: <?php echo htmlspecialchars($post['MemberID']); ?></div>
+                        <!--<div class="post-header">Member ID: <?php echo htmlspecialchars($post['MemberID']); ?></div>-->
                         <div class="post-content"><?php echo nl2br(htmlspecialchars($post['TextContent'])); ?></div>
                         <?php if (!empty($post['LinkURL'])): ?>
                             <a href="<?php echo htmlspecialchars($post['LinkURL']); ?>" target="_blank">View Link</a>
