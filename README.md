@@ -3,8 +3,8 @@
 ### Authors:
 | Name    | Student ID | ENCS Email |
 | -------- | ------- | ------- |
-| Omar Dabayeh | 40211626 | o_dabaye@live.concordia.ca |
-| Arjun Gautam | 40191187 | ar_gauta@live.concordia.ca |
+| Omar Dabayeh | 40100195 | o_dabaye@live.concordia.ca |
+| Arjun Gautam | 40189411 | ar_gauta@live.concordia.ca |
 | Rihazul Islam | 40212505 | ri_is@live.concordia.ca |
 | Asadbek Bakhodirov | 40322378 | as_bakho@live.concordia.ca |
 
