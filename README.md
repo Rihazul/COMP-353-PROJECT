@@ -14,9 +14,12 @@ This project aims to develop a Private Online Community Social Network System us
 ## How to test the website:
 1) Go to https://upc353.encs.concordia.ca/links.php
    (Links file is a file that has all the links of each PHP file created.)
-2) Insert Username and Password:  ->Username: upc353_2    ->Password:SleighParableSystem73
-3) Click on the link database.php and open it on a new seperate tab.
+   ![image](https://github.com/user-attachments/assets/a7e1ae2f-d7b4-4bf8-ab1f-0f6491c5f312)
+
+3) Insert Username and Password:  ->Username: upc353_2    ->Password:SleighParableSystem73
+4) Click on the link database.php and open it on a new seperate tab.
      (database.php is the page where all the table are there for debugging purpose and for populating the table. Also on top of the page, there is a section to add the SQL scripts for any changes or retrieving any information from the tables.)
+![image](https://github.com/user-attachments/assets/1280ddaa-5667-4ed9-8a46-822fb13cca1d)
 
 
 ## How to run the website locally:
